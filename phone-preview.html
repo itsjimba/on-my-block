@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My Block — Phone Preview</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; }
+    body {
+      display: grid;
+      place-items: center;
+      margin: 0;
+      padding: 28px;
+      background: radial-gradient(ellipse at center, #30333b, #121317 70%);
+      color: #e7e7e9;
+      font: 14px/1.4 system-ui, sans-serif;
+    }
+    .preview { text-align: center; }
+    .label { margin-bottom: 14px; color: #d3d3d7; letter-spacing: 0.04em; }
+    .phone {
+      position: relative;
+      width: 414px;
+      height: 868px;
+      padding: 11px;
+      overflow: hidden;
+      border: 2px solid #5b5e66;
+      border-radius: 54px;
+      background: #08090b;
+      box-shadow: 0 35px 100px #000b, inset 0 0 0 2px #1e2025;
+    }
+    .screen {
+      width: 390px;
+      height: 844px;
+      overflow: hidden;
+      border-radius: 40px;
+      background: #0a0a0c;
+    }
+    iframe { display: block; width: 390px; height: 844px; border: 0; }
+    .notch {
+      position: absolute;
+      z-index: 2;
+      top: 13px;
+      left: 50%;
+      width: 126px;
+      height: 28px;
+      border-radius: 20px;
+      background: #08090b;
+      transform: translateX(-50%);
+      pointer-events: none;
+    }
+    .home-indicator {
+      position: absolute;
+      z-index: 2;
+      bottom: 17px;
+      left: 50%;
+      width: 112px;
+      height: 4px;
+      border-radius: 5px;
+      background: #fff;
+      opacity: 0.8;
+      transform: translateX(-50%);
+      pointer-events: none;
+    }
+    @media (max-width: 470px), (max-height: 940px) {
+      body { padding: 12px; }
+      .phone {
+        transform: scale(min(calc((100vw - 28px) / 414), calc((100vh - 60px) / 868)));
+        transform-origin: center;
+      }
+      .preview { height: min(900px, calc(100vh - 24px)); }
+    }
+  </style>
+</head>
+<body>
+  <div class="preview">
+    <div class="label">MY BLOCK · PHONE PREVIEW</div>
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="screen">
+        <iframe src="./index.html" title="My Block login on a phone"></iframe>
+      </div>
+      <div class="home-indicator"></div>
+    </div>
+  </div>
+</body>
+</html>

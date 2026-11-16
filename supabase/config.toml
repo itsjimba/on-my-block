@@ -1,0 +1,2 @@
+[functions.login-with-photo]
+verify_jwt = false

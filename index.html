@@ -1,0 +1,2539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My Block</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      overflow: hidden;
+      background: #0a0a0c;
+      color: #f2efe9;
+      font-family: system-ui, sans-serif;
+    }
+
+    #bg {
+      position: fixed;
+      z-index: 0;
+      inset: -12px;
+      background: url("./saved_photo.png") center / cover no-repeat;
+      filter: brightness(0.8);
+      transition: filter 1s ease;
+    }
+    body.in #bg { filter: blur(7px) brightness(0.42); }
+
+    #intro {
+      position: fixed;
+      z-index: 3;
+      inset: 0;
+      width: 100%;
+      border: 0;
+      color: inherit;
+      background: linear-gradient(transparent 45%, rgba(10, 10, 12, 0.88));
+      font: inherit;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      padding: 24px 20px 56px;
+      transition: opacity 0.5s, visibility 0.5s;
+    }
+    #intro b { font-size: clamp(2.2rem, 8vw, 4rem); letter-spacing: 0.04em; }
+    #intro span { color: #c2bdb5; }
+    body.in #intro { opacity: 0; visibility: hidden; pointer-events: none; }
+
+    #login {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      display: grid;
+      place-items: center;
+      padding: 16px;
+      overflow-y: auto;
+      opacity: 0;
+      pointer-events: none;
+      transform: scale(0.97);
+      transition: opacity 0.5s 0.15s, transform 0.6s 0.15s;
+    }
+    body.in #login { opacity: 1; pointer-events: auto; transform: none; }
+    body.logged-in #login {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transform: scale(0.98);
+      transition-delay: 0s;
+    }
+    #card {
+      position: relative;
+      width: min(340px, 100%);
+      padding: 18px 16px;
+      border: 1px solid rgba(255, 255, 255, 0.24);
+      border-radius: 20px;
+      background: linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.17),
+        rgba(255, 255, 255, 0.055) 52%,
+        rgba(255, 255, 255, 0.11)
+      );
+      box-shadow: 0 24px 90px rgba(0, 0, 0, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+      backdrop-filter: blur(24px) saturate(155%);
+      -webkit-backdrop-filter: blur(24px) saturate(155%);
+      text-align: center;
+    }
+    h1 { margin: 0; font-size: 1.35rem; }
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+    .wheel-wrap { min-width: 0; }
+    .wheel-stage {
+      position: relative;
+      height: 112px;
+      overflow: hidden;
+      border-radius: 20px;
+      perspective: 720px;
+      perspective-origin: center;
+      touch-action: pan-y;
+      user-select: none;
+      cursor: grab;
+    }
+    .wheel-stage::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 220px;
+      height: 68px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 50%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
+      box-shadow: 0 0 24px rgba(180, 214, 231, 0.12), inset 0 0 18px rgba(255, 255, 255, 0.08);
+      transform: translate(-50%, -50%) rotateX(12deg);
+      pointer-events: none;
+    }
+    .wheel-stage.dragging { cursor: grabbing; }
+    .wheel {
+      position: relative;
+      width: 100%;
+      height: 112px;
+      transform-style: preserve-3d;
+    }
+    .friend {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 66px;
+      height: 92px;
+      padding: 0;
+      overflow: hidden;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-radius: 14px;
+      background-color: #292a31;
+      background-image: url("./saved_photo.png");
+      background-repeat: no-repeat;
+      background-size: 300% auto;
+      box-shadow: 0 8px 26px rgba(0, 0, 0, 0.32);
+      opacity: 0.76;
+      transform: translate(-50%, -50%) rotateY(var(--angle, 0deg)) translateZ(88px) scale(0.84);
+      transition: transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.35s, border-color 0.35s;
+      cursor: pointer;
+      backface-visibility: hidden;
+    }
+    .friend:nth-child(1) { background-position: 0% 6%; }
+    .friend:nth-child(2) { background-position: 50% 18%; }
+    .friend:nth-child(3) { background-position: 100% 8%; }
+    .friend:nth-child(4) { background-position: 50% 100%; }
+    .friend:nth-child(5) { background-position: 0% 48%; }
+    .friend::after {
+      content: attr(data-name);
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      overflow: hidden;
+      padding: 5px 3px 4px;
+      color: #fff;
+      background: linear-gradient(transparent, rgba(0, 0, 0, 0.85));
+      font-size: 0.58rem;
+      line-height: 1;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .friend.active {
+      border-color: #f3c978;
+      opacity: 1;
+      transform: translate(-50%, -50%) rotateY(var(--angle, 0deg)) translateZ(88px) scale(1);
+    }
+    .not-you {
+      display: none;
+      border: 0;
+      padding: 8px 10px;
+      color: #b9b4ac;
+      background: transparent;
+      font: inherit;
+      font-size: 0.85rem;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      cursor: pointer;
+    }
+    body.wrong .not-you { display: block; }
+    #status {
+      min-height: 18px;
+      margin: 8px 0 0;
+      color: #b7b3ae;
+      font-size: 0.9rem;
+    }
+    body.success #status { color: #f3d996; }
+    .join-trigger {
+      width: 100%;
+      min-height: 44px;
+      margin-top: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 11px;
+      color: #f2efe9;
+      background: rgba(255, 255, 255, 0.08);
+      font: inherit;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+    .join-view {
+      max-height: min(76vh, 680px);
+      overflow-y: auto;
+      text-align: left;
+    }
+    .auth-form { display: grid; gap: 12px; text-align: left; }
+    .form-field { display: grid; gap: 6px; color: #e5e0d7; font-size: 0.8rem; }
+    .form-field input {
+      width: 100%;
+      min-height: 44px;
+      padding: 10px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 11px;
+      outline: none;
+      color: #f2efe9;
+      background: rgba(6, 7, 9, 0.55);
+      font: inherit;
+      font-size: 0.95rem;
+    }
+    .form-field input:focus { border-color: #e5c27c; }
+    .form-field input[type="file"] { padding: 8px; font-size: 0.78rem; }
+    .auth-submit {
+      width: 100%;
+      min-height: 44px;
+      border: 0;
+      border-radius: 11px;
+      color: #17130b;
+      background: #e8c477;
+      font: inherit;
+      font-weight: 650;
+      cursor: pointer;
+    }
+    .auth-submit:disabled { opacity: 0.55; cursor: wait; }
+    .auth-switch {
+      width: 100%;
+      margin-top: 13px;
+      border: 0;
+      color: #eee5d2;
+      background: transparent;
+      font: inherit;
+      font-size: 0.84rem;
+      cursor: pointer;
+    }
+    #join-status, #verify-status, #setup-status {
+      min-height: 18px;
+      margin: 8px 0 0;
+      color: #d3cfc6;
+      font-size: 0.8rem;
+      overflow-wrap: anywhere;
+    }
+    .setup-details {
+      margin-top: 15px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+      color: #d5d0c8;
+      text-align: left;
+      font-size: 0.78rem;
+    }
+    .setup-details summary { cursor: pointer; }
+    .setup-details p { line-height: 1.45; }
+    .setup-details .form-field { margin-top: 10px; }
+    .setup-details .auth-submit { margin-top: 10px; }
+    .join-heading { margin: 0; font-size: 1.1rem; text-align: left; }
+    .login-view[hidden], [hidden] { display: none !important; }
+    #dashboard {
+      position: fixed;
+      z-index: 2;
+      inset: 0;
+      display: none;
+      overflow-y: auto;
+      padding: max(18px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
+      background: linear-gradient(160deg, rgba(14, 17, 22, 0.78), rgba(8, 9, 12, 0.97)), url("./saved_photo.png") center / cover fixed;
+      -webkit-overflow-scrolling: touch;
+    }
+    body.logged-in #dashboard { display: block; }
+    .dashboard-inner { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; width: min(900px, 100%); margin: 0 auto; }
+    .dashboard-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      grid-column: 1 / -1;
+      margin: 8px 2px 0;
+      padding: 6px 0;
+    }
+    .dashboard-header h1 { font-size: 1.15rem; letter-spacing: 0.11em; }
+    .account-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #d6d1c8;
+      font-size: 0.82rem;
+    }
+    .account-avatar {
+      display: block;
+      width: 30px;
+      height: 30px;
+      border: 2px solid rgba(243, 201, 120, 0.8);
+      border-radius: 50%;
+      background: #45413a center / cover no-repeat;
+    }
+    .sign-out {
+      padding: 7px 9px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 10px;
+      color: #e5e0d7;
+      background: rgba(255, 255, 255, 0.06);
+      font: inherit;
+      font-size: 0.76rem;
+      cursor: pointer;
+    }
+    .dashboard-card {
+      margin: 0;
+      padding: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.075);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+    }
+    .art-intro { position: relative; grid-column: 1 / -1; min-height: 220px; overflow: hidden; padding: 28px; border: 1px solid rgba(255,255,255,0.16); border-radius: 28px; background: linear-gradient(110deg, rgba(15,17,21,0.84), rgba(15,17,21,0.18)), url("./saved_photo.png") center / cover; box-shadow: 0 24px 55px rgba(0,0,0,0.26), inset 0 1px 0 rgba(255,255,255,0.14); }
+    .art-intro::after { content: ""; position: absolute; right: -28px; bottom: -45px; width: 170px; height: 170px; border: 1px solid rgba(243,201,120,0.35); border-radius: 50%; box-shadow: 0 0 0 18px rgba(243,201,120,0.05), 0 0 0 38px rgba(243,201,120,0.035); }
+    .art-kicker { position: relative; z-index: 1; color: #f3c978; font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase; }
+    .art-intro h2 { position: relative; z-index: 1; max-width: 440px; margin: 10px 0 14px; font-size: clamp(2rem, 7vw, 4rem); line-height: 0.95; letter-spacing: -0.05em; }
+    .art-intro p { position: relative; z-index: 1; max-width: 360px; margin: 0; color: #d2cdc3; font-size: 0.9rem; line-height: 1.5; }
+    .art-bubble { position: absolute; z-index: 1; top: 24px; right: 24px; max-width: 170px; padding: 11px 13px; border: 1px solid rgba(255,255,255,0.22); border-radius: 16px 16px 4px 16px; color: #211a0d; background: #f3c978; box-shadow: 0 12px 25px rgba(0,0,0,0.2); font-size: 0.78rem; line-height: 1.3; }
+    .dashboard-inner > section[aria-labelledby="camera-title"] { grid-column: 1 / -1; }
+    .dashboard-inner > .chat-open-card { grid-column: 1 / -1; }
+    .card-heading {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .card-heading h2 { margin: 0; font-size: 1.02rem; }
+    .card-heading span, .muted { color: #aaa9aa; font-size: 0.78rem; }
+    .camera-frame {
+      position: relative;
+      display: grid;
+      min-height: 188px;
+      place-items: center;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 15px;
+      background:
+        radial-gradient(ellipse at 50% 38%, rgba(108, 120, 133, 0.3), transparent 56%),
+        linear-gradient(145deg, #242932, #101216);
+    }
+    .camera-frame::after { content: "INSTANT"; position: absolute; right: 12px; bottom: 10px; padding: 4px 7px; border: 1px solid rgba(255,255,255,0.22); border-radius: 999px; color: rgba(255,255,255,0.72); background: rgba(0,0,0,0.28); font-size: 0.58rem; letter-spacing: 0.14em; pointer-events: none; }
+    .camera-frame img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .camera-empty { color: #c1c0c0; font-size: 0.9rem; }
+    .action-button, .chat-send {
+      min-height: 42px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      color: #f2efe9;
+      background: rgba(255, 255, 255, 0.1);
+      font: inherit;
+      cursor: pointer;
+    }
+    .action-button { padding: 9px 12px; }
+    .action-button.primary {
+      border-color: rgba(243, 201, 120, 0.55);
+      color: #17130b;
+      background: #e8c477;
+      font-weight: 650;
+    }
+    .action-button:disabled { opacity: 0.45; cursor: default; }
+    #camera-input { display: none; }
+    #camera-status, #location-status {
+      min-height: 18px;
+      margin: 9px 0 0;
+      color: #c3beb4;
+      font-size: 0.8rem;
+    }
+    .snap-inbox {
+      display: grid;
+      gap: 8px;
+      margin-top: 14px;
+    }
+    .snap-inbox::before { content: "Your instant circle"; color: #f0d99f; font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; }
+    .snap-inbox-heading {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 2px;
+    }
+    .snap-inbox-heading h3 { margin: 0; font-size: 0.88rem; }
+    .snap-inbox-heading span, .snap-empty { color: #aaa9aa; font-size: 0.76rem; }
+    .snap-item {
+      display: flex;
+      width: 100%;
+      min-height: 58px;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 12px;
+      border: 1px solid transparent;
+      border-radius: 14px;
+      color: #f2efe9;
+      background: linear-gradient(rgba(232,196,119,0.1), rgba(232,196,119,0.1)) padding-box, linear-gradient(135deg, #f3c978, #a55c9c, #4c8ec4) border-box;
+      text-align: left;
+      font: inherit;
+      cursor: pointer;
+    }
+    .snap-icon { display: grid; width: 36px; height: 36px; place-items: center; border: 2px solid #f3c978; border-radius: 50%; background: #292a31; font-size: 1.2rem; }
+    .snap-item-text { display: grid; gap: 2px; }
+    .snap-item-text b { font-size: 0.82rem; font-weight: 600; }
+    .snap-item-text span { color: #aaa9aa; font-size: 0.73rem; }
+    .instant-note { margin: -4px 0 12px; color: #bdb8b0; font-size: 0.78rem; }
+    .story-card { position: relative; overflow: hidden; background: radial-gradient(circle at 90% 0%, rgba(241,159,104,0.14), transparent 34%), rgba(255,255,255,0.075); }
+    .story-card::after { content: "✦"; position: absolute; top: 16px; right: 20px; color: rgba(242,177,112,0.7); font-size: 3rem; transform: rotate(15deg); pointer-events: none; }
+    .story-form { display: grid; gap: 9px; margin-bottom: 14px; }
+    .story-form input { width: 100%; min-height: 40px; padding: 8px 10px; border: 1px solid rgba(255,255,255,0.14); border-radius: 10px; outline: none; color: #f2efe9; background: rgba(6,7,9,0.55); font: inherit; }
+    .story-form input:focus { border-color: #f2b170; }
+    .story-feed { display: grid; gap: 10px; }
+    .story-item { padding: 13px; border: 1px solid rgba(242,177,112,0.2); border-radius: 16px; background: rgba(242,177,112,0.07); }
+    .story-item-head { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+    .story-item-head b { color: #f4d1a8; font-size: 0.84rem; }
+    .story-item-head span { color: #aaa9aa; font-size: 0.7rem; }
+    .story-title { display: block; margin: 7px 0 4px; color: #fff1df; font-size: 0.95rem; }
+    .story-url { display: block; overflow: hidden; color: #d8a976; font-size: 0.72rem; text-overflow: ellipsis; white-space: nowrap; }
+    .story-actions { display: flex; gap: 8px; margin-top: 11px; }
+    .story-action { min-height: 32px; padding: 5px 9px; border: 1px solid rgba(255,255,255,0.12); border-radius: 999px; color: #d9d2c8; background: rgba(255,255,255,0.06); font: inherit; font-size: 0.72rem; cursor: pointer; }
+    .story-comments { display: grid; gap: 4px; margin-top: 9px; color: #bbb5ad; font-size: 0.72rem; }
+    .story-comment-form { display: flex; gap: 6px; margin-top: 9px; }
+    .story-comment-form input { flex: 1; min-width: 0; min-height: 32px; padding: 5px 9px; border: 1px solid rgba(255,255,255,0.12); border-radius: 999px; color: #f2efe9; background: rgba(0,0,0,0.2); font: inherit; font-size: 0.72rem; }
+    .story-comment-form button { min-width: 32px; border: 0; border-radius: 50%; color: #2a190e; background: #f2b170; cursor: pointer; }
+    .story-empty { margin: 0; color: #aaa9aa; font-size: 0.78rem; }
+    .battery-card { position: relative; overflow: hidden; background: radial-gradient(circle at 8% 10%, rgba(137,255,180,0.13), transparent 34%), rgba(255,255,255,0.075); }
+    .battery-card::after { content: "⌁"; position: absolute; right: 20px; top: 12px; color: rgba(137,255,180,0.65); font-size: 3rem; transform: rotate(-20deg); pointer-events: none; }
+    .battery-rank-list { display: grid; gap: 8px; }
+    .battery-rank { display: grid; grid-template-columns: 24px 32px minmax(0,1fr) auto; gap: 9px; align-items: center; padding: 8px 10px; border: 1px solid rgba(137,255,180,0.15); border-radius: 13px; background: rgba(137,255,180,0.055); }
+    .battery-rank-number { color: #91f3b1; font-size: 0.72rem; }
+    .battery-rank-avatar { width: 32px; height: 32px; border: 1px solid rgba(137,255,180,0.55); border-radius: 50%; background: #343d3a center / cover no-repeat; }
+    .battery-rank-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.8rem; }
+    .battery-meter { width: 78px; height: 6px; overflow: hidden; border-radius: 99px; background: rgba(255,255,255,0.12); }
+    .battery-meter i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #f0ad69, #91f3b1); }
+    .battery-percent { min-width: 34px; color: #b9f7ca; text-align: right; font-size: 0.76rem; }
+    .battery-empty { margin: 0; color: #aaa9aa; font-size: 0.78rem; line-height: 1.45; }
+    .snap-empty { margin: 0; }
+    .snap-viewer {
+      position: fixed;
+      z-index: 5;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      background: rgba(4, 5, 7, 0.94);
+    }
+    .snap-viewer[hidden] { display: none; }
+    .snap-viewer-content {
+      display: grid;
+      width: min(390px, 100%);
+      gap: 12px;
+    }
+    .snap-viewer img {
+      width: 100%;
+      max-height: min(68vh, 620px);
+      border-radius: 18px;
+      background: #17191d;
+      object-fit: contain;
+    }
+    .snap-viewer-title { margin: 0; font-size: 0.95rem; }
+    .snap-viewer-actions { display: flex; gap: 9px; }
+    .snap-viewer-actions .action-button { flex: 1; }
+    .location-map {
+      display: block;
+      width: 100%;
+      min-height: 184px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 15px;
+      background:
+        radial-gradient(ellipse at 50% 50%, rgba(232, 196, 119, 0.11), transparent 68%),
+        repeating-linear-gradient(0deg, transparent 0 31px, rgba(220, 227, 208, 0.055) 32px 33px),
+        repeating-linear-gradient(90deg, transparent 0 43px, rgba(220, 227, 208, 0.05) 44px 45px),
+        linear-gradient(130deg, #263536, #313d37 50%, #283438);
+    }
+    .location-refresh { width: 100%; margin-top: 10px; }
+    .shots-list { display: grid; gap: 9px; }
+    .shot-person { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 10px; border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; background: rgba(255,255,255,0.055); }
+    .shot-avatar { width: 42px; height: 42px; border: 2px solid rgba(232,196,119,0.65); border-radius: 50%; background: #45413a center / cover no-repeat; }
+    .shot-person-info { min-width: 0; }
+    .shot-person-info b, .shot-person-info span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .shot-person-info b { font-size: 0.86rem; }
+    .shot-person-info span { margin-top: 2px; color: #aaa9aa; font-size: 0.74rem; }
+    .shot-invite { min-height: 36px; padding: 7px 9px; font-size: 0.76rem; }
+    .shots-empty { margin: 0; color: #aaa9aa; font-size: 0.8rem; line-height: 1.45; }
+    .shots-card { position: relative; overflow: hidden; background: radial-gradient(circle at 85% 10%, rgba(91,181,255,0.13), transparent 34%), rgba(255,255,255,0.075); }
+    .shots-card::before { content: ""; position: absolute; top: -75px; right: -50px; width: 180px; height: 180px; border: 1px solid rgba(91,181,255,0.24); border-radius: 50%; box-shadow: 0 0 0 18px rgba(91,181,255,0.04), 0 0 0 38px rgba(91,181,255,0.025); pointer-events: none; }
+    .shots-form { display: grid; gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1); }
+    .shots-form .form-field { font-size: 0.76rem; }
+    .shots-form input { min-height: 40px; padding: 8px 10px; border: 1px solid rgba(255,255,255,0.14); border-radius: 10px; outline: none; color: #f2efe9; background: rgba(6,7,9,0.55); font: inherit; }
+    .shots-form input:focus { border-color: #e5c27c; }
+    #shots-status { min-height: 18px; margin: 8px 0 0; color: #c3beb4; font-size: 0.78rem; }
+    .shots-planner { margin-top: 10px; }
+    .shots-planner summary { display: inline-flex; min-height: 34px; align-items: center; padding: 6px 10px; border: 1px solid rgba(91,181,255,0.28); border-radius: 999px; color: #b9ddff; background: rgba(91,181,255,0.08); cursor: pointer; font-size: 0.76rem; list-style: none; }
+    .shots-planner summary::-webkit-details-marker { display: none; }
+    .shot-invite-card { display: grid; gap: 4px; padding: 9px 10px; border-radius: 12px; background: rgba(232,196,119,0.09); font-size: 0.78rem; }
+    .shot-invite-card b { color: #f0d99f; font-size: 0.8rem; }
+    .meetup-round { display: grid; gap: 11px; }
+    .meetup-round[hidden] { display: none; }
+    .meetup-rule { margin: -4px 0 2px; color: #aeb8c2; font-size: 0.76rem; line-height: 1.4; }
+    .meetup-suggesters { display: flex; flex-wrap: wrap; gap: 7px; }
+    .meetup-suggester { padding: 6px 9px; border: 1px solid rgba(142,209,255,0.22); border-radius: 999px; color: #b9ddff; background: rgba(142,209,255,0.07); font-size: 0.72rem; }
+    .meetup-proposals { display: grid; gap: 9px; }
+    .meetup-proposal { padding: 12px; border: 1px solid rgba(142,209,255,0.18); border-radius: 15px; background: rgba(142,209,255,0.055); }
+    .meetup-proposal.winner { border-color: #91f3b1; background: rgba(137,255,180,0.1); }
+    .meetup-proposal h3 { margin: 0 0 6px; font-size: 0.86rem; }
+    .meetup-proposal p { margin: 3px 0; color: #b8c1c9; font-size: 0.76rem; }
+    .meetup-proposal-form { display: grid; gap: 7px; margin-top: 8px; }
+    .meetup-proposal-form input { min-height: 34px; padding: 6px 9px; border: 1px solid rgba(255,255,255,0.13); border-radius: 9px; color: #f2efe9; background: rgba(0,0,0,0.2); font: inherit; font-size: 0.76rem; }
+    .meetup-vote { width: 100%; min-height: 34px; margin-top: 8px; border: 1px solid rgba(142,209,255,0.28); border-radius: 9px; color: #b9ddff; background: rgba(142,209,255,0.08); cursor: pointer; font: inherit; font-size: 0.76rem; }
+    .meetup-vote:disabled { opacity: 0.55; cursor: default; }
+    .meetup-vote.selected { border-color: #91f3b1; color: #07150d; background: #91f3b1; }
+    .meetup-lock { margin: 0; padding: 8px 10px; border-radius: 10px; color: #f2d69c; background: rgba(243,201,120,0.09); font-size: 0.76rem; }
+    .meetup-next { width: 100%; }
+    .chat-open-card {
+      display: block;
+      width: 100%;
+      color: inherit;
+      text-align: left;
+      font: inherit;
+      cursor: pointer;
+    }
+    .chat-open-card .card-heading { margin-bottom: 5px; }
+    .chat-open-title { color: #f2efe9; font-size: 1.02rem; font-weight: 650; }
+    .chat-open-hint { display: block; color: #aaa9aa; font-size: 0.8rem; }
+    .chat-open-card:focus-visible, .chat-back:focus-visible {
+      outline: 2px solid #e8c477;
+      outline-offset: 3px;
+    }
+    .chat-fullscreen {
+      position: fixed;
+      z-index: 4;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      padding: max(12px, env(safe-area-inset-top)) 16px max(12px, env(safe-area-inset-bottom));
+      background: var(--chat-background, radial-gradient(circle at 20% 0%, rgba(95,186,255,0.16), transparent 32%), linear-gradient(160deg, #14171c, #08090c));
+      transition: background 0.35s ease;
+    }
+    .chat-fullscreen[hidden] { display: none; }
+    body.chat-open { overflow: hidden; }
+    .chat-fullscreen-inner {
+      display: flex;
+      width: min(680px, 100%);
+      min-height: 0;
+      flex: 1;
+      flex-direction: column;
+      align-self: center;
+    }
+    .chat-fullscreen-header {
+      display: flex;
+      min-height: 58px;
+      flex: 0 0 auto;
+      align-items: center;
+      gap: 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .chat-fullscreen-header > div:nth-child(2) { flex: 1; }
+    .chat-subtitle { display: block; margin-top: 2px; color: #8f9eae; font-size: 0.75rem; }
+    .chat-tools { display: flex; justify-content: flex-end; gap: 7px; margin: 8px 0 -2px; }
+    .chat-tool { min-width: 38px; min-height: 38px; border: 1px solid rgba(255,255,255,0.14); border-radius: 11px; color: inherit; background: rgba(255,255,255,0.07); font: inherit; cursor: pointer; }
+    .chat-tool[aria-pressed="true"] { border-color: #6ebfff; color: #09131e; background: #8ed1ff; }
+    .chat-theme-panel { display: flex; flex-wrap: wrap; gap: 7px; padding: 10px 0 2px; }
+    .chat-theme-panel[hidden] { display: none; }
+    .theme-swatch { width: 31px; height: 31px; border: 2px solid transparent; border-radius: 50%; cursor: pointer; }
+    .theme-swatch[aria-pressed="true"] { border-color: #f2efe9; box-shadow: 0 0 0 2px rgba(255,255,255,0.18); }
+    .theme-swatch[data-theme="aurora"] { background: linear-gradient(135deg, #172438, #071013 60%, #2c8b92); }
+    .theme-swatch[data-theme="violet"] { background: linear-gradient(135deg, #281c46, #100c1e 60%, #a34cb5); }
+    .theme-swatch[data-theme="ember"] { background: linear-gradient(135deg, #422019, #160e0b 60%, #bd713c); }
+    .theme-swatch[data-theme="mono"] { background: linear-gradient(135deg, #31343a, #0b0c0e 60%, #9fa9b7); }
+    .chat-back {
+      min-width: 44px;
+      min-height: 44px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 12px;
+      color: inherit;
+      background: rgba(255, 255, 255, 0.07);
+      font: inherit;
+      cursor: pointer;
+    }
+    .chat-fullscreen-header h2 { margin: 0; font-size: 1.05rem; }
+    .chat-fullscreen-header p { margin: 2px 0 0; color: #aaa9aa; font-size: 0.75rem; }
+    .chat-messages {
+      display: flex;
+      min-height: 0;
+      flex: 1;
+      flex-direction: column;
+      gap: 9px;
+      overflow-y: auto;
+      padding: 16px 2px;
+      overscroll-behavior: contain;
+    }
+    .chat-message.voice { display: flex; align-items: center; gap: 8px; }
+    .chat-message.sticker { width: fit-content; padding: 7px 10px; font-size: 2.2rem; line-height: 1; }
+    .voice-play { min-width: 32px; min-height: 32px; border: 0; border-radius: 50%; color: #07131c; background: #8ed1ff; cursor: pointer; }
+    .voice-wave { width: 70px; height: 20px; background: repeating-linear-gradient(90deg, #8ed1ff 0 2px, transparent 2px 7px); mask: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); opacity: 0.75; }
+    .chat-message {
+      align-self: flex-start;
+      max-width: 84%;
+      padding: 8px 11px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 13px 13px 13px 4px;
+      background: rgba(255, 255, 255, 0.085);
+      font-size: 0.83rem;
+      overflow-wrap: anywhere;
+    }
+    .chat-message.mine {
+      align-self: flex-end;
+      border-color: rgba(232, 196, 119, 0.18);
+      border-radius: 13px 13px 4px 13px;
+      background: rgba(232, 196, 119, 0.15);
+    }
+    .chat-message b {
+      display: block;
+      margin-bottom: 2px;
+      color: #e8c477;
+      font-size: 0.7rem;
+      font-weight: 600;
+    }
+    .chat-form { display: flex; gap: 8px; }
+    .chat-form input {
+      flex: 1;
+      min-width: 0;
+      min-height: 42px;
+      padding: 8px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      outline: none;
+      color: #f2efe9;
+      background: rgba(6, 7, 9, 0.55);
+      font: inherit;
+      font-size: 0.88rem;
+    }
+    .chat-form input:focus { border-color: #e5c27c; }
+    .chat-send { width: 48px; font-size: 1.1rem; }
+    .chat-voice { width: 44px; min-height: 42px; border: 1px solid rgba(142,209,255,0.32); border-radius: 12px; color: #8ed1ff; background: rgba(142,209,255,0.09); font: inherit; cursor: pointer; }
+    .chat-voice.recording { color: #fff; background: #bd5360; animation: pulse-recording 1.15s infinite; }
+    @keyframes pulse-recording { 50% { box-shadow: 0 0 0 7px rgba(189,83,96,0.14); } }
+    .chat-fullscreen .chat-form { flex: 0 0 auto; padding-top: 10px; }
+    .chat-sticker-toggle { width: 42px; min-height: 42px; border: 1px solid rgba(242,177,112,0.3); border-radius: 12px; color: #f2b170; background: rgba(242,177,112,0.08); font-size: 1.1rem; cursor: pointer; }
+    .chat-stickers { display: flex; flex-wrap: wrap; gap: 7px; padding: 8px 0 0; }
+    .chat-stickers[hidden] { display: none; }
+    .sticker-button { width: 39px; height: 35px; border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; background: rgba(255,255,255,0.07); font-size: 1.25rem; cursor: pointer; }
+    .proximity-alert { align-self: center; max-width: 92%; padding: 8px 12px; border: 1px solid rgba(255,224,141,0.45); border-radius: 999px; color: #211a0d; background: #f3c978; font-size: 0.76rem; text-align: center; }
+    .feed-photo {
+      width: 100%;
+      max-height: 240px;
+      border-radius: 13px;
+      object-fit: cover;
+    }
+    .chat-saved-photo {
+      display: block;
+      width: min(240px, 100%);
+      margin-top: 6px;
+      border-radius: 10px;
+      object-fit: cover;
+    }
+
+    @media (max-width: 680px) {
+      body { overflow-x: hidden; overflow-y: auto; }
+      #login { padding: 14px; overflow-x: hidden; }
+      #card { padding: 18px 16px; }
+      #dashboard { padding-right: 13px; padding-left: 13px; }
+      .dashboard-inner { display: flex; flex-direction: column; gap: 13px; }
+      .art-intro { min-height: 240px; padding: 23px; }
+      .art-bubble { top: 18px; right: 18px; max-width: 145px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="bg" aria-hidden="true"></div>
+  <button id="intro" type="button" aria-controls="login">
+    <b>My Block</b>
+    <span>Tap to enter</span>
+  </button>
+
+  <main id="login" aria-label="My Block login">
+    <section id="card">
+      <section id="login-view" class="login-view" aria-labelledby="login-title">
+        <h1 id="login-title">My Block</h1>
+        <section class="wheel-wrap" aria-label="Choose a friend photo">
+          <div class="wheel-stage">
+            <div class="wheel" id="wheel" role="group" aria-label="Friend photo wheel"></div>
+          </div>
+          <div class="sr-only" id="wheel-label" aria-live="polite">Select a member photo</div>
+        </section>
+        <form class="auth-form" id="login-form">
+          <label class="form-field" for="login-password">Password
+            <input id="login-password" name="password" type="password" inputmode="text" autocomplete="current-password" required>
+          </label>
+          <button class="auth-submit" id="login-submit" type="submit">Log in</button>
+        </form>
+        <p id="status" role="status" aria-live="polite">Select a photo to begin.</p>
+        <button class="not-you" id="not-you" type="button">Not you? Choose another photo</button>
+        <button class="join-trigger" id="show-join" type="button">Join your block</button>
+      </section>
+
+      <section id="join-view" class="join-view login-view" aria-labelledby="join-title" hidden>
+        <h2 class="join-heading" id="join-title">Join your block</h2>
+        <p class="login-subtitle">Create your account with your email address.</p>
+        <form class="auth-form" id="join-form">
+          <label class="form-field" for="join-photo">Profile photo
+            <input id="join-photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp" required>
+          </label>
+          <label class="form-field" for="join-name">Your name
+            <input id="join-name" name="name" type="text" minlength="1" maxlength="40" autocomplete="name" required>
+          </label>
+          <label class="form-field" for="join-email">Email address
+            <input id="join-email" name="email" type="email" placeholder="you@example.com" autocomplete="email" required>
+          </label>
+          <label class="form-field" for="join-password">Password
+            <input id="join-password" name="password" type="password" minlength="8" autocomplete="new-password" required>
+          </label>
+          <button class="auth-submit" type="submit">Create account</button>
+        </form>
+        <p id="join-status" role="status" aria-live="polite"></p>
+        <button class="auth-switch" id="back-to-login" type="button">Back to login</button>
+
+        <details class="setup-details">
+          <summary>Connect Supabase</summary>
+          <p>Run <strong>supabase-schema.sql</strong> in your project's SQL Editor so new member photos can appear on the login wheel and the login-attempt limit is enabled. Deploy <strong>supabase/functions/login-with-photo/index.ts</strong> with the Supabase CLI for photo-and-password login (<code>supabase link --project-ref pszpbycdmtbzfgpvfrsa</code>, then <code>supabase functions deploy login-with-photo</code>). Ensure the function has the <code>SUPABASE_ANON_KEY</code> and <code>SUPABASE_SERVICE_ROLE_KEY</code> secrets. Never put the service-role key in this page. In Authentication → Email Templates → Confirm signup, use the one-time code <code>{{ .Token }}</code> so it matches the email verification screen. Supabase's built-in mailer only sends to addresses on your organization team; configure custom SMTP for other addresses. Member names and profile photos are visible on the login wheel, so do not upload sensitive images. The project URL and publishable key below are safe for browser use.</p>
+          <label class="form-field" for="supabase-url">Project URL
+          <input id="supabase-url" type="url" value="" autocomplete="url">
+          </label>
+          <label class="form-field" for="supabase-key">Public anon / publishable key
+          <input id="supabase-key" type="password" value="" autocomplete="off">
+          </label>
+          <button class="auth-submit" id="connect-supabase" type="button">Save and connect</button>
+          <p id="setup-status" role="status" aria-live="polite"></p>
+        </details>
+      </section>
+
+      <section id="verify-view" class="join-view login-view" aria-labelledby="verify-title" hidden>
+        <h2 class="join-heading" id="verify-title">Verify your email</h2>
+        <p class="login-subtitle">Enter the one-time code from your email.</p>
+        <form class="auth-form" id="verify-form">
+          <label class="form-field" for="verify-code">Verification code
+            <input id="verify-code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" required>
+          </label>
+          <button class="auth-submit" type="submit">Verify and join</button>
+        </form>
+        <p id="verify-status" role="status" aria-live="polite"></p>
+        <details class="setup-details">
+          <summary>Code not received?</summary>
+          <p>Check that the email address is correct and look in Spam/Junk. Supabase's built-in mailer only sends to email addresses on your organization team and has a low sending limit. For other addresses, configure a custom SMTP provider in Authentication → SMTP Settings. You can also check Authentication → Logs for an email delivery error.</p>
+        </details>
+        <button class="auth-switch" id="retry-profile" type="button" hidden>Retry saving profile</button>
+        <button class="auth-switch" id="resend-code" type="button">Resend verification code</button>
+        <button class="auth-switch" id="back-to-join" type="button">Back to sign up</button>
+      </section>
+
+    </section>
+  </main>
+
+  <main id="dashboard" aria-label="My Block dashboard" aria-hidden="true">
+    <div class="dashboard-inner">
+      <header class="dashboard-header">
+        <h1>MY BLOCK</h1>
+        <div class="account-chip">
+          <span id="account-name">Member</span>
+          <span class="account-avatar" id="account-avatar" aria-hidden="true"></span>
+          <button class="sign-out" id="sign-out" type="button">Sign out</button>
+        </div>
+      </header>
+
+      <section class="art-intro" aria-labelledby="art-intro-title">
+        <span class="art-kicker">The neighborhood is talking</span>
+        <h2 id="art-intro-title">Make a little noise.</h2>
+        <p>Share a moment, find your people, and turn an ordinary night into a story worth telling.</p>
+        <span class="art-bubble">“Who’s close enough for one more?”</span>
+      </section>
+
+      <section class="dashboard-card" aria-labelledby="camera-title">
+        <div class="card-heading">
+          <h2 id="camera-title">Instants</h2>
+          <span>Share it before it disappears</span>
+        </div>
+        <p class="instant-note">Like a story, but closer to home. Each instant can be viewed once unless you save it to chat.</p>
+        <div class="camera-frame" id="camera-frame">
+          <span class="camera-empty" id="camera-empty">Tap Snap to open your camera</span>
+        </div>
+        <input id="camera-input" type="file" accept="image/*" capture="environment" aria-label="Take or choose a photo">
+        <div class="camera-actions">
+          <button class="action-button primary" id="take-snap" type="button">Snap</button>
+          <button class="action-button" id="send-snap" type="button" disabled>Send to others</button>
+        </div>
+        <p id="camera-status" role="status" aria-live="polite">Camera opens on your device. Sending is a local demo; other phones need a shared server.</p>
+        <div class="snap-inbox" aria-labelledby="sent-snaps-title">
+          <div class="snap-inbox-heading">
+            <h3 id="sent-snaps-title">Recent instants</h3>
+            <span id="snap-count">0 new</span>
+          </div>
+          <div id="snap-list" aria-live="polite"><p class="snap-empty">No new snaps.</p></div>
+        </div>
+      </section>
+
+      <section class="dashboard-card" aria-labelledby="location-title">
+        <div class="card-heading">
+          <h2 id="location-title">Location</h2>
+          <span>Latest shared locations</span>
+        </div>
+        <svg class="location-map" id="location-map" viewBox="0 0 360 200" role="img" aria-label="No shared locations yet">
+          <text x="180" y="104" fill="#c3beb4" text-anchor="middle" font-size="12">No shared locations yet</text>
+        </svg>
+        <button class="action-button location-refresh" id="share-location" type="button">Share my location while I’m here</button>
+        <p id="location-status" role="status" aria-live="polite">Locations are shared with all verified members of this Supabase project.</p>
+      </section>
+
+      <section class="dashboard-card battery-card" aria-labelledby="battery-title">
+        <div class="card-heading"><h2 id="battery-title">Battery Pulse</h2><span>Highest to lowest</span></div>
+        <div class="battery-rank-list" id="battery-rank-list" aria-live="polite"><p class="battery-empty">Battery rankings appear when members share their location.</p></div>
+      </section>
+
+      <section class="dashboard-card story-card" aria-labelledby="stories-title">
+        <div class="card-heading"><h2 id="stories-title">Substack Stories</h2><span>Read what your block is thinking</span></div>
+        <form class="story-form" id="story-form">
+          <label class="form-field" for="story-title">Share a story
+            <input id="story-title" name="title" type="text" maxlength="100" placeholder="A story worth passing on" required>
+          </label>
+          <label class="form-field" for="story-url">Substack link
+            <input id="story-url" name="url" type="url" placeholder="https://yourname.substack.com/p/story" required>
+          </label>
+          <button class="action-button primary" type="submit">Publish to the block</button>
+        </form>
+        <div class="story-feed" id="story-feed" aria-live="polite"><p class="story-empty">No stories shared yet. Start the conversation.</p></div>
+        <p id="story-status" role="status" aria-live="polite"></p>
+      </section>
+
+      <section class="dashboard-card shots-card" aria-labelledby="shots-title">
+        <div class="card-heading"><h2 id="shots-title">Meet Up</h2><span>Find your closest people</span></div>
+        <div class="meetup-round" id="meetup-round" aria-live="polite">
+          <p class="meetup-rule">Two members are chosen at random to suggest an activity and place. Everyone votes anonymously, including the two suggesters.</p>
+          <div class="meetup-suggesters" id="meetup-suggesters"></div>
+          <div class="meetup-proposals" id="meetup-proposals"></div>
+          <p class="meetup-lock" id="meetup-lock">Waiting for the group to join before choosing two suggesters.</p>
+          <button class="action-button primary meetup-next" id="meetup-next" type="button" hidden>Start the next meet up</button>
+        </div>
+        <div class="legacy-meetup" hidden>
+        <div class="shots-list" id="shots-list" aria-live="polite"><p class="shots-empty">Share your location to see who is nearby.</p></div>
+        <details class="shots-planner">
+          <summary>+ Plan a meet up</summary>
+        <form class="shots-form" id="shots-form">
+          <label class="form-field" for="shot-drink">Suggest an activity
+            <input id="shot-drink" name="drink" type="text" maxlength="60" placeholder="Coffee, a walk, live music…" required>
+          </label>
+          <label class="form-field" for="shot-place">Suggest a place
+            <input id="shot-place" name="place" type="text" maxlength="80" placeholder="The corner bar or my patio" required>
+          </label>
+          <label class="form-field" for="shot-message">Add a note (optional)
+            <input id="shot-message" name="message" type="text" maxlength="160" placeholder="Tonight around 8?">
+          </label>
+          <button class="action-button primary" id="shot-send" type="submit" disabled>Select someone nearby first</button>
+        </form>
+        </details>
+        <div class="snap-inbox" aria-labelledby="shot-invites-title">
+          <div class="snap-inbox-heading"><h3 id="shot-invites-title">Sent invites</h3><span id="shot-count">0</span></div>
+          <div id="shot-invites"><p class="shots-empty">No invites sent yet.</p></div>
+        </div>
+        <p id="shots-status" role="status" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <button class="dashboard-card chat-open-card" id="open-chat" type="button" aria-haspopup="dialog" aria-controls="chat-view">
+        <span class="card-heading">
+          <span class="chat-open-title">Chat the block</span>
+          <span aria-hidden="true">Open ›</span>
+        </span>
+        <span class="chat-open-hint">Tap to open the chat</span>
+      </button>
+    </div>
+  </main>
+
+  <section class="chat-fullscreen" id="chat-view" role="dialog" aria-modal="true" aria-labelledby="chat-title" hidden>
+    <div class="chat-fullscreen-inner">
+      <header class="chat-fullscreen-header">
+        <button class="chat-back" id="close-chat" type="button" aria-label="Back to dashboard">←</button>
+        <div>
+          <h2 id="chat-title">Chat the block</h2>
+          <span class="chat-subtitle">Messages and voice notes · device-only demo</span>
+          <p>Chat · device-only demo</p>
+        </div>
+      </header>
+      <div class="chat-tools">
+        <button class="chat-tool" id="chat-theme-toggle" type="button" aria-label="Change chat theme" aria-expanded="false">◐</button>
+      </div>
+      <div class="chat-theme-panel" id="chat-theme-panel" hidden aria-label="Chat themes">
+        <button class="theme-swatch" data-theme="aurora" aria-label="Aurora theme" aria-pressed="true" type="button"></button>
+        <button class="theme-swatch" data-theme="violet" aria-label="Violet theme" aria-pressed="false" type="button"></button>
+        <button class="theme-swatch" data-theme="ember" aria-label="Ember theme" aria-pressed="false" type="button"></button>
+        <button class="theme-swatch" data-theme="mono" aria-label="Mono theme" aria-pressed="false" type="button"></button>
+      </div>
+      <div class="chat-messages" id="chat-messages" role="log" aria-live="polite">
+        <p class="muted">Messages in this demo stay on this device and are not shared with other phones yet.</p>
+      </div>
+      <div class="chat-stickers" id="chat-stickers" hidden aria-label="Chat stickers">
+        <button class="sticker-button" type="button" data-sticker="✨" aria-label="Sparkles">✨</button>
+        <button class="sticker-button" type="button" data-sticker="😂" aria-label="Laughing">😂</button>
+        <button class="sticker-button" type="button" data-sticker="🫶" aria-label="Heart hands">🫶</button>
+        <button class="sticker-button" type="button" data-sticker="🔥" aria-label="Fire">🔥</button>
+        <button class="sticker-button" type="button" data-sticker="🎨" aria-label="Art palette">🎨</button>
+        <button class="sticker-button" type="button" data-sticker="🍜" aria-label="Noodles">🍜</button>
+        <button class="sticker-button" type="button" data-sticker="🌙" aria-label="Moon">🌙</button>
+        <button class="sticker-button" type="button" data-sticker="🙌" aria-label="Celebration">🙌</button>
+      </div>
+      <form class="chat-form" id="chat-form">
+        <label class="sr-only" for="chat-input">Write a message to the block</label>
+        <input id="chat-input" type="text" maxlength="240" placeholder="Message the block" autocomplete="off">
+        <button class="chat-sticker-toggle" id="chat-sticker-toggle" type="button" aria-label="Open stickers" aria-expanded="false">☺</button>
+        <button class="chat-voice" id="chat-voice" type="button" aria-label="Record voice note">●</button>
+        <button class="chat-send" type="submit" aria-label="Send message">➤</button>
+      </form>
+    </div>
+  </section>
+
+  <div class="snap-viewer" id="snap-viewer" role="dialog" aria-modal="true" aria-labelledby="snap-viewer-title" hidden>
+    <div class="snap-viewer-content">
+      <h2 class="snap-viewer-title" id="snap-viewer-title">Instant from a friend</h2>
+      <img id="snap-viewer-image" alt="A snap that can only be viewed once">
+      <div class="snap-viewer-actions">
+        <button class="action-button" id="close-snap" type="button">Close</button>
+        <button class="action-button primary" id="save-snap" type="button">Save to Chat the block</button>
+      </div>
+        <p class="muted">This instant disappears after this view unless you save it to Chat the block.</p>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const body = document.body;
+    const status = document.getElementById("status");
+    const dashboard = document.getElementById("dashboard");
+    const cameraInput = document.getElementById("camera-input");
+    const sendSnapButton = document.getElementById("send-snap");
+    const cameraStatus = document.getElementById("camera-status");
+    const cameraFrame = document.getElementById("camera-frame");
+    const supabaseConfig = { url: "", key: "" };
+    const snapUrls = [];
+    const sentSnaps = [];
+    let capturedSnapUrl = null;
+    let activeSnap = null;
+    let supabaseClient = null;
+    let currentUser = null;
+    let locationWatchId = null;
+    let mapRefreshTimer = null;
+    let locationSharingEnabled = false;
+    let lastLocationWriteAt = 0;
+    let currentBatteryLevel = null;
+    let pendingProfile = null;
+    let activeIndex = 0;
+    let selectedMember = null;
+    let members = [];
+    let dragStartX = null;
+    let suppressCardClick = false;
+    let selectedShotPerson = null;
+    const shotInvites = [];
+    const stories = [];
+    const proximityNotifiedPairs = new Set();
+    let meetupMembers = [];
+    let meetupRound = null;
+
+    document.getElementById("intro").addEventListener("click", () => {
+      body.classList.add("in");
+    });
+
+    let friends = [];
+    const wheel = document.getElementById("wheel");
+    const wheelLabel = document.getElementById("wheel-label");
+    const loginView = document.getElementById("login-view");
+    const joinView = document.getElementById("join-view");
+    const verifyView = document.getElementById("verify-view");
+    const setupStatus = document.getElementById("setup-status");
+    const joinStatus = document.getElementById("join-status");
+    const verifyStatus = document.getElementById("verify-status");
+    const loginForm = document.getElementById("login-form");
+    const loginPassword = document.getElementById("login-password");
+    const loginSubmit = document.getElementById("login-submit");
+
+    function showAuthView(view) {
+      [loginView, joinView, verifyView].forEach(section => {
+        section.hidden = section !== view;
+      });
+    }
+
+    function getClient(messageElement = status) {
+      if (supabaseClient) return supabaseClient;
+      messageElement.textContent = "Supabase is not connected. Check your project URL and publishable key in Connect Supabase.";
+      return null;
+    }
+
+    function setBusy(form, busy) {
+      const button = form.querySelector('button[type="submit"]');
+      button.disabled = busy;
+      button.textContent = busy ? "Please wait…" : button.dataset.label;
+    }
+
+    ["join-form", "verify-form", "login-form"].forEach(formId => {
+      const form = document.getElementById(formId);
+      form.querySelector('button[type="submit"]').dataset.label =
+        form.querySelector('button[type="submit"]').textContent;
+    });
+
+    function setClientFromInputs() {
+      const url = document.getElementById("supabase-url").value.trim();
+      const key = document.getElementById("supabase-key").value.trim();
+      if (!window.supabase || typeof window.supabase.createClient !== "function") {
+        setupStatus.textContent = "Could not load the Supabase client. Check your internet connection and reload.";
+        return false;
+      }
+      if (!url || !key) {
+        setupStatus.textContent = "Enter both your Supabase project URL and public anon/publishable key.";
+        return false;
+      }
+      try {
+        const parsedUrl = new URL(url);
+        if (parsedUrl.protocol !== "https:") {
+          setupStatus.textContent = "The Supabase project URL must use HTTPS.";
+          return false;
+        }
+        supabaseClient = window.supabase.createClient(url, key);
+        setupStatus.textContent = "Supabase connected. Your existing login is unchanged.";
+        restoreSession();
+        refreshFriendWheel();
+        return true;
+      } catch (error) {
+        setupStatus.textContent = `Could not connect: ${error.message}`;
+        return false;
+      }
+    }
+
+    document.getElementById("connect-supabase").addEventListener("click", setClientFromInputs);
+    async function initializeSupabase() {
+      if (!window.supabase || typeof window.supabase.createClient !== "function") {
+        setupStatus.textContent = "Could not load Supabase. Check your internet connection and reload.";
+        return;
+      }
+      try {
+        const response = await fetch("/api/config", { cache: "no-store" });
+        if (response.ok) Object.assign(supabaseConfig, await response.json());
+      } catch { /* Manual setup remains available below. */ }
+      if (!supabaseConfig.url || !supabaseConfig.key) {
+        setupStatus.textContent = "Supabase is not configured for this deployment yet.";
+        return;
+      }
+      document.getElementById("supabase-url").value = supabaseConfig.url;
+      document.getElementById("supabase-key").value = supabaseConfig.key;
+      if (setClientFromInputs()) joinStatus.textContent = "Supabase connected.";
+    }
+    initializeSupabase();
+    document.getElementById("show-join").addEventListener("click", () => {
+      showAuthView(joinView);
+      joinStatus.textContent = "";
+    });
+    document.getElementById("back-to-login").addEventListener("click", () => showAuthView(loginView));
+    document.getElementById("back-to-join").addEventListener("click", () => showAuthView(joinView));
+
+    function positionWheel() {
+      friends.forEach((friend, index) => {
+        let offset = index - activeIndex;
+        if (offset > friends.length / 2) offset -= friends.length;
+        if (offset < -friends.length / 2) offset += friends.length;
+        friend.style.setProperty("--angle", `${offset * 48}deg`);
+        friend.style.opacity = Math.abs(offset) <= 2 ? (offset === 0 ? "1" : "0.76") : "0";
+        friend.style.pointerEvents = Math.abs(offset) <= 2 ? "auto" : "none";
+      });
+    }
+
+    function renderFriendWheel() {
+      wheel.replaceChildren();
+      friends = members.map((member, index) => {
+        const friend = document.createElement("button");
+        friend.className = "friend";
+        friend.type = "button";
+        friend.setAttribute("aria-label", `${member.display_name}${member.isDemo ? " demo account" : ""}`);
+        friend.setAttribute("aria-pressed", "false");
+        friend.dataset.name = member.display_name;
+        friend.title = member.display_name;
+        friend.style.backgroundImage = `url("${member.photoUrl}")`;
+        friend.style.backgroundSize = "cover";
+        friend.style.backgroundPosition = "center";
+        friend.addEventListener("click", () => {
+          if (!suppressCardClick) selectFriend(index);
+        });
+        wheel.append(friend);
+        return friend;
+      });
+      activeIndex = Math.min(activeIndex, Math.max(0, friends.length - 1));
+      if (selectedMember && !members.some(member => member.id === selectedMember.id)) {
+        selectedMember = null;
+        body.classList.remove("selected", "wrong", "success");
+        loginPassword.value = "";
+      }
+      positionWheel();
+    }
+
+    async function refreshFriendWheel() {
+      const demoMember = {
+        id: "demo-mkisii",
+        display_name: "Mkisii",
+        photoUrl: "./saved_photo.png",
+        isDemo: true
+      };
+      if (!supabaseClient) {
+        members = [demoMember];
+        renderFriendWheel();
+        return;
+      }
+      const { data, error } = await supabaseClient
+        .from("profiles")
+        .select("id, display_name, avatar_path")
+        .order("display_name");
+      if (error) {
+        status.textContent = `Could not load member photos: ${error.message}`;
+        members = [demoMember];
+        renderFriendWheel();
+        return;
+      }
+      members = [
+        demoMember,
+        ...data.map(profile => ({
+          id: profile.id,
+          display_name: profile.display_name,
+          photoUrl: avatarUrl(profile.avatar_path) || "./saved_photo.png",
+          isDemo: false
+        }))
+      ];
+      renderFriendWheel();
+    }
+
+    function selectFriend(index) {
+      if (!friends.length) return;
+      activeIndex = (index + friends.length) % friends.length;
+      selectedMember = members[activeIndex];
+      friends.forEach((friend, friendIndex) => {
+        const selected = friendIndex === activeIndex;
+        friend.classList.toggle("active", selected);
+        friend.setAttribute("aria-pressed", String(selected));
+      });
+      positionWheel();
+      wheelLabel.textContent = selectedMember.display_name;
+      body.classList.remove("wrong", "success");
+      body.classList.add("selected");
+      loginPassword.value = "";
+      loginSubmit.textContent = selectedMember.isDemo ? "Enter My Block" : "Log in";
+      status.textContent = selectedMember.isDemo
+        ? "Selected Mkisii. Enter demo code 123456."
+        : `Selected ${selectedMember.display_name}. Enter this account's password.`;
+    }
+
+    function openDemoAccount() {
+      body.classList.remove("wrong");
+      body.classList.add("success");
+      status.textContent = "Welcome, Mkisii!";
+      document.getElementById("account-avatar").style.backgroundImage = `url("${selectedMember.photoUrl}")`;
+      document.getElementById("account-name").textContent = selectedMember.display_name;
+      currentUser = null;
+      document.getElementById("login").setAttribute("aria-hidden", "true");
+      dashboard.setAttribute("aria-hidden", "false");
+      body.classList.add("logged-in");
+      cameraStatus.textContent = "Mkisii demo account. Snaps and chat are device-only demos.";
+    }
+
+    wheel.addEventListener("pointerdown", event => {
+      dragStartX = event.clientX;
+      wheel.parentElement.classList.add("dragging");
+    });
+    document.addEventListener("pointerup", event => {
+      if (dragStartX === null) return;
+      const distance = event.clientX - dragStartX;
+      if (Math.abs(distance) > 24) {
+        const steps = Math.max(1, Math.round(Math.abs(distance) / 90));
+        selectFriend(activeIndex + steps * (distance < 0 ? 1 : -1));
+        suppressCardClick = true;
+        window.setTimeout(() => { suppressCardClick = false; }, 250);
+      }
+      dragStartX = null;
+      wheel.parentElement.classList.remove("dragging");
+    });
+    document.addEventListener("pointercancel", () => {
+      dragStartX = null;
+      wheel.parentElement.classList.remove("dragging");
+    });
+    wheel.addEventListener("keydown", event => {
+      if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
+        event.preventDefault();
+        selectFriend(activeIndex + (event.key === "ArrowRight" ? 1 : -1));
+        friends[activeIndex].focus();
+      }
+    });
+    document.getElementById("not-you").addEventListener("click", () => {
+      body.classList.remove("selected", "wrong", "success");
+      selectedMember = null;
+      friends.forEach(friend => {
+        friend.classList.remove("active");
+        friend.setAttribute("aria-pressed", "false");
+      });
+      loginForm.reset();
+      loginSubmit.textContent = "Log in";
+      status.textContent = "Select a photo to begin.";
+    });
+
+    async function loadProfile(user) {
+      const { data, error } = await supabaseClient
+        .from("profiles")
+        .select("id, display_name, avatar_path")
+        .eq("id", user.id)
+        .single();
+      if (error) throw error;
+      return data;
+    }
+
+    function avatarUrl(path) {
+      if (!path) return "";
+      return supabaseClient.storage.from("avatars").getPublicUrl(path).data.publicUrl;
+    }
+
+    async function showDashboard(user, profile) {
+      currentUser = user;
+      document.getElementById("account-name").textContent = profile.display_name;
+      const avatar = document.getElementById("account-avatar");
+      const photoUrl = avatarUrl(profile.avatar_path);
+      avatar.style.backgroundImage = photoUrl ? `url("${photoUrl}")` : "none";
+      document.getElementById("login").setAttribute("aria-hidden", "true");
+      dashboard.setAttribute("aria-hidden", "false");
+      body.classList.add("in");
+      body.classList.add("logged-in");
+      await refreshLocationMap();
+      await refreshShots();
+      await refreshStories();
+      await refreshMeetup();
+      if (mapRefreshTimer !== null) window.clearInterval(mapRefreshTimer);
+      mapRefreshTimer = window.setInterval(refreshLocationMap, 30000);
+    }
+
+    async function restoreSession() {
+      if (!supabaseClient) return;
+      const { data, error } = await supabaseClient.auth.getSession();
+      if (error) {
+        status.textContent = `Could not restore your sign-in: ${error.message}`;
+        return;
+      }
+      if (!data.session) return;
+      try {
+        const profile = await loadProfile(data.session.user);
+        await showDashboard(data.session.user, profile);
+      } catch (profileError) {
+        status.textContent = `You are signed in, but your profile could not be loaded: ${profileError.message}`;
+      }
+    }
+
+    document.getElementById("login-form").addEventListener("submit", async event => {
+      event.preventDefault();
+      const client = getClient(status);
+      if (!client) return;
+      const form = event.currentTarget;
+      if (!selectedMember) {
+        status.textContent = "Choose your photo from the wheel first.";
+        return;
+      }
+      if (selectedMember.isDemo) {
+        if (form.elements.password.value === "123456") {
+          openDemoAccount();
+        } else {
+          body.classList.add("wrong");
+          status.textContent = "That code is not right. Try 123456 for the Mkisii demo.";
+        }
+        return;
+      }
+      const password = form.elements.password.value;
+      status.textContent = "";
+      setBusy(form, true);
+      let authenticated = false;
+      try {
+        const { data, error } = await client.functions.invoke("login-with-photo", {
+          body: { profileId: selectedMember.id, password }
+        });
+        if (error) {
+          let message = error.message;
+          if (error.context instanceof Response) {
+            const response = await error.context.json();
+            if (typeof response.error === "string") message = response.error;
+            else if (typeof response.message === "string") message = response.message;
+          }
+          throw new Error(message);
+        }
+        if (!data?.access_token || !data?.refresh_token) {
+          throw new Error("The photo login function did not return a sign-in session. Confirm that it is deployed.");
+        }
+        const { data: sessionData, error: sessionError } = await client.auth.setSession({
+          access_token: data.access_token,
+          refresh_token: data.refresh_token
+        });
+        if (sessionError) throw sessionError;
+        authenticated = true;
+        if (!sessionData.user) throw new Error("Supabase did not return a user for this login.");
+        if (sessionData.user.id !== selectedMember.id) {
+          throw new Error("The selected photo does not match the authenticated account.");
+        }
+        const profile = await loadProfile(sessionData.user);
+        form.reset();
+        await showDashboard(sessionData.user, profile);
+      } catch (error) {
+        if (authenticated) {
+          const { error: signOutError } = await client.auth.signOut();
+          status.textContent = signOutError
+            ? `Could not complete login: ${error.message}. Could not clear the sign-in either: ${signOutError.message}`
+            : `Could not log in: ${error.message}`;
+        } else {
+          status.textContent = `Could not log in: ${error.message}`;
+        }
+      } finally {
+        setBusy(form, false);
+      }
+    });
+
+    document.getElementById("join-form").addEventListener("submit", async event => {
+      event.preventDefault();
+      const client = getClient(joinStatus);
+      if (!client) return;
+      const form = event.currentTarget;
+      const photo = form.elements.photo.files[0];
+      const displayName = form.elements.name.value.trim();
+      const email = form.elements.email.value.trim();
+      const password = form.elements.password.value;
+      if (!photo || !["image/jpeg", "image/png", "image/webp"].includes(photo.type) || photo.size > 5 * 1024 * 1024) {
+        joinStatus.textContent = "Choose a JPG, PNG, or WebP profile photo no larger than 5 MB.";
+        return;
+      }
+      pendingProfile = { displayName, photo };
+      joinStatus.textContent = "";
+      setBusy(form, true);
+      let accountCreated = false;
+      try {
+        const { data, error } = await client.auth.signUp({
+          email,
+          password,
+          options: { data: { display_name: displayName } }
+        });
+        if (error) throw error;
+        if (!data.user) {
+          throw new Error("Supabase did not return a user for this sign-up.");
+        }
+        accountCreated = true;
+        pendingProfile = { displayName, photo };
+        if (data.session) {
+          await finishSignupAndReturnToLogin(data.user);
+        } else {
+          showAuthView(verifyView);
+          verifyStatus.textContent =
+            `Supabase accepted the sign-up request for ${email}. Check your inbox and Spam/Junk for the verification code.`;
+        }
+      } catch (error) {
+        joinStatus.textContent = accountCreated
+          ? `Your account was created, but setup could not finish: ${error.message}`
+          : `Could not start sign-up: ${error.message}`;
+      } finally {
+        setBusy(form, false);
+      }
+    });
+
+    async function finishProfile(user) {
+      if (!pendingProfile) throw new Error("Your profile details are no longer available. Return to sign-up and enter them again.");
+      const { displayName, photo } = pendingProfile;
+      const extension = photo.type === "image/png" ? "png" : photo.type === "image/webp" ? "webp" : "jpg";
+      const path = `${user.id}/avatar-${Date.now()}.${extension}`;
+      const { error: uploadError } = await supabaseClient.storage
+        .from("avatars")
+        .upload(path, photo, { contentType: photo.type, cacheControl: "3600", upsert: true });
+      if (uploadError) throw uploadError;
+      const { error: profileError } = await supabaseClient
+        .from("profiles")
+        .update({ display_name: displayName, avatar_path: path })
+        .eq("id", user.id);
+      if (profileError) throw profileError;
+      const profile = await loadProfile(user);
+      pendingProfile = null;
+      return profile;
+    }
+
+    async function finishSignupAndReturnToLogin(user) {
+      const profile = await finishProfile(user);
+      const { error } = await supabaseClient.auth.signOut();
+      if (error) {
+        await showDashboard(user, profile);
+        cameraStatus.textContent =
+          `Your account and profile are ready, but Supabase could not return you to login: ${error.message}`;
+        return;
+      }
+      currentUser = null;
+      stopLocationWatch();
+      locationSharingEnabled = false;
+      if (mapRefreshTimer !== null) {
+        window.clearInterval(mapRefreshTimer);
+        mapRefreshTimer = null;
+      }
+      body.classList.remove("logged-in", "selected", "wrong", "success");
+      document.getElementById("login").setAttribute("aria-hidden", "false");
+      dashboard.setAttribute("aria-hidden", "true");
+      loginForm.reset();
+      document.getElementById("join-form").reset();
+      document.getElementById("verify-form").reset();
+      showAuthView(loginView);
+      await refreshFriendWheel();
+      const memberIndex = members.findIndex(member => member.id === profile.id);
+      if (memberIndex === -1) {
+        status.textContent = "Account created, but the new photo could not be loaded. Check the Supabase profile-read policy and reload.";
+        return;
+      }
+      selectFriend(memberIndex);
+      status.textContent = "Account created. Your photo is selected; log in with your password.";
+    }
+
+    document.getElementById("verify-form").addEventListener("submit", async event => {
+      event.preventDefault();
+      const client = getClient(verifyStatus);
+      if (!client) return;
+      const form = event.currentTarget;
+      const email = document.getElementById("join-email").value.trim();
+      const token = form.elements.code.value.trim();
+      verifyStatus.textContent = "";
+      document.getElementById("retry-profile").hidden = true;
+      setBusy(form, true);
+      try {
+        const { data, error } = await client.auth.verifyOtp({ email, token, type: "signup" });
+        if (error) throw error;
+        if (!data.user) throw new Error("Supabase verified the code but did not return a user.");
+        await finishSignupAndReturnToLogin(data.user);
+      } catch (error) {
+        const { data: sessionData, error: sessionError } = await client.auth.getSession();
+        if (sessionError) {
+          verifyStatus.textContent =
+            `Could not check your sign-in after verification failed: ${sessionError.message}`;
+        } else if (sessionData.session?.user.email?.toLowerCase() === email.toLowerCase()) {
+          document.getElementById("retry-profile").hidden = false;
+          verifyStatus.textContent =
+            `Your email is verified, but your profile could not be saved: ${error.message}`;
+        } else {
+          verifyStatus.textContent = `Could not verify your email: ${error.message}`;
+        }
+      } finally {
+        setBusy(form, false);
+      }
+    });
+
+    document.getElementById("retry-profile").addEventListener("click", async () => {
+      const { data, error } = await supabaseClient.auth.getUser();
+      if (error || !data.user) {
+        verifyStatus.textContent =
+          `Could not find your verified session: ${error ? error.message : "please verify your email again."}`;
+        return;
+      }
+      try {
+        await finishSignupAndReturnToLogin(data.user);
+      } catch (profileError) {
+        verifyStatus.textContent = `Could not save your profile: ${profileError.message}`;
+      }
+    });
+
+    document.getElementById("resend-code").addEventListener("click", async event => {
+      const client = getClient(verifyStatus);
+      if (!client) return;
+      const button = event.currentTarget;
+      const email = document.getElementById("join-email").value.trim();
+      verifyStatus.textContent = "";
+      button.disabled = true;
+      try {
+        const { error } = await client.auth.resend({ type: "signup", email });
+        if (error) throw error;
+        verifyStatus.textContent =
+          `Supabase accepted the resend request for ${email}. Check your inbox and Spam/Junk.`;
+      } catch (error) {
+        verifyStatus.textContent = `Could not resend the verification code: ${error.message}`;
+      } finally {
+        button.disabled = false;
+      }
+    });
+
+    document.getElementById("sign-out").addEventListener("click", async () => {
+      closeChat(false);
+      if (!supabaseClient || !currentUser) {
+        body.classList.remove("logged-in", "wrong", "success");
+        document.getElementById("login").setAttribute("aria-hidden", "false");
+        dashboard.setAttribute("aria-hidden", "true");
+        loginForm.reset();
+        selectedMember = null;
+        body.classList.remove("selected");
+        friends.forEach(friend => {
+          friend.classList.remove("active");
+          friend.setAttribute("aria-pressed", "false");
+        });
+        loginSubmit.textContent = "Log in";
+        status.textContent = "Select a photo to begin.";
+        return;
+      }
+      const { error } = await supabaseClient.auth.signOut();
+      if (error) {
+        document.getElementById("location-status").textContent = `Could not sign out: ${error.message}`;
+        return;
+      }
+      stopLocationWatch();
+      locationSharingEnabled = false;
+      if (mapRefreshTimer !== null) {
+        window.clearInterval(mapRefreshTimer);
+        mapRefreshTimer = null;
+      }
+      currentUser = null;
+      body.classList.remove("logged-in");
+      document.getElementById("login").setAttribute("aria-hidden", "false");
+      dashboard.setAttribute("aria-hidden", "true");
+      status.textContent = "You have signed out.";
+      showAuthView(loginView);
+    });
+
+    function distanceBetween(first, second) {
+      const radians = degrees => degrees * Math.PI / 180;
+      const latitudeDelta = radians(second.latitude - first.latitude);
+      const longitudeDelta = radians(second.longitude - first.longitude);
+      const value = Math.sin(latitudeDelta / 2) ** 2
+        + Math.cos(radians(first.latitude)) * Math.cos(radians(second.latitude))
+        * Math.sin(longitudeDelta / 2) ** 2;
+      return 6371 * 2 * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value));
+    }
+
+    function formatDistance(kilometres) {
+      return kilometres < 1
+        ? `${Math.round(kilometres * 1000)} m`
+        : `${kilometres.toFixed(1)} km`;
+    }
+
+    async function readBatteryLevel() {
+      if (!navigator.getBattery) return null;
+      try {
+        const battery = await navigator.getBattery();
+        const update = () => { currentBatteryLevel = Math.round(battery.level * 100); };
+        update();
+        battery.addEventListener("levelchange", update);
+        return currentBatteryLevel;
+      } catch { return null; }
+    }
+
+    function renderBatteryRank(profiles, locations) {
+      const list = document.getElementById("battery-rank-list");
+      list.replaceChildren();
+      const profileById = new Map(profiles.map(profile => [profile.id, profile]));
+      const ranked = locations
+        .filter(location => Number.isFinite(location.battery_level) && profileById.has(location.user_id))
+        .map(location => ({ ...profileById.get(location.user_id), ...location, battery_level: Math.max(0, Math.min(100, Math.round(location.battery_level))), photoUrl: avatarUrl(profileById.get(location.user_id).avatar_path) }))
+        .sort((first, second) => second.battery_level - first.battery_level);
+      if (!ranked.length) {
+        const empty = document.createElement("p");
+        empty.className = "battery-empty";
+        empty.textContent = "Battery rankings appear when members share their location.";
+        list.append(empty);
+        return;
+      }
+      ranked.forEach((person, index) => {
+        const row = document.createElement("div");
+        row.className = "battery-rank";
+        const number = document.createElement("span");
+        number.className = "battery-rank-number";
+        number.textContent = `#${index + 1}`;
+        const avatar = document.createElement("span");
+        avatar.className = "battery-rank-avatar";
+        if (person.photoUrl) avatar.style.backgroundImage = `url("${person.photoUrl}")`;
+        const info = document.createElement("span");
+        info.className = "battery-rank-name";
+        info.textContent = person.display_name + (person.id === currentUser?.id ? " · you" : "");
+        const meter = document.createElement("span");
+        meter.className = "battery-meter";
+        const fill = document.createElement("i");
+        fill.style.width = `${person.battery_level}%`;
+        meter.append(fill);
+        const percent = document.createElement("span");
+        percent.className = "battery-percent";
+        percent.textContent = `${person.battery_level}%`;
+        row.append(number, avatar, info, meter, percent);
+        list.append(row);
+      });
+    }
+
+    function beepProximity() {
+      try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        oscillator.frequency.value = 740;
+        oscillator.type = "sine";
+        gain.gain.setValueAtTime(0.0001, audioContext.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.16, audioContext.currentTime + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.24);
+        oscillator.connect(gain).connect(audioContext.destination);
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 0.25);
+      } catch { /* Audio requires a user gesture in some browsers. */ }
+    }
+
+    function notifyProximity(profiles, locations) {
+      const profileById = new Map(profiles.map(profile => [profile.id, profile]));
+      for (let firstIndex = 0; firstIndex < locations.length; firstIndex += 1) {
+        for (let secondIndex = firstIndex + 1; secondIndex < locations.length; secondIndex += 1) {
+          const first = locations[firstIndex];
+          const second = locations[secondIndex];
+          if (distanceBetween(first, second) > 1) continue;
+          const pair = [first.user_id, second.user_id].sort().join(":");
+          if (proximityNotifiedPairs.has(pair)) continue;
+          proximityNotifiedPairs.add(pair);
+          const firstName = profileById.get(first.user_id)?.display_name || "Someone";
+          const secondName = profileById.get(second.user_id)?.display_name || "someone else";
+          const alert = document.createElement("div");
+          alert.className = "proximity-alert";
+          alert.textContent = `⌁ ${firstName} and ${secondName} are within 1 km`;
+          const messages = document.getElementById("chat-messages");
+          messages.querySelector(".muted")?.remove();
+          messages.append(alert);
+          messages.scrollTop = messages.scrollHeight;
+          beepProximity();
+        }
+      }
+    }
+
+    function svgElement(tag, attributes = {}) {
+      const element = document.createElementNS("http://www.w3.org/2000/svg", tag);
+      Object.entries(attributes).forEach(([name, value]) => element.setAttribute(name, value));
+      return element;
+    }
+
+    async function refreshLocationMap() {
+      if (!supabaseClient || !currentUser) return;
+      const map = document.getElementById("location-map");
+      try {
+        const [{ data: profiles, error: profileError }, { data: locations, error: locationError }] = await Promise.all([
+          supabaseClient.from("profiles").select("id, display_name").order("display_name"),
+          supabaseClient.from("locations").select("user_id, latitude, longitude, updated_at, battery_level")
+        ]);
+        if (profileError) throw profileError;
+        if (locationError) throw locationError;
+        renderBatteryRank(profiles, locations);
+        notifyProximity(profiles, locations);
+        const locationByUser = new Map(locations.map(location => [location.user_id, location]));
+        const members = profiles
+          .filter(profile => locationByUser.has(profile.id))
+          .map(profile => ({ ...profile, ...locationByUser.get(profile.id) }));
+        map.replaceChildren();
+        map.setAttribute("aria-label", members.length
+          ? `Last shared locations for ${members.map(member => member.display_name).join(", ")}`
+          : "No shared locations yet");
+        if (!members.length) {
+          const empty = svgElement("text", { x: 180, y: 104, fill: "#c3beb4", "text-anchor": "middle", "font-size": 12 });
+          empty.textContent = "No shared locations yet";
+          map.append(empty);
+          return;
+        }
+
+        const minLatitude = Math.min(...members.map(member => member.latitude));
+        const maxLatitude = Math.max(...members.map(member => member.latitude));
+        const minLongitude = Math.min(...members.map(member => member.longitude));
+        const maxLongitude = Math.max(...members.map(member => member.longitude));
+        const points = members.map((member, index) => {
+          const spread = members.length > 1 ? 280 : 0;
+          const x = maxLongitude === minLongitude
+            ? 180 + (index - (members.length - 1) / 2) * Math.min(24, spread / members.length)
+            : 40 + ((member.longitude - minLongitude) / (maxLongitude - minLongitude)) * 280;
+          const y = maxLatitude === minLatitude
+            ? 100 + (index % 2 ? 12 : -12)
+            : 34 + ((maxLatitude - member.latitude) / (maxLatitude - minLatitude)) * 132;
+          return { ...member, x, y };
+        });
+
+        points.slice(1).forEach((point, index) => {
+          const previous = points[index];
+          const line = svgElement("line", {
+            x1: previous.x, y1: previous.y, x2: point.x, y2: point.y,
+            stroke: "rgba(232,196,119,0.65)", "stroke-width": 2, "stroke-dasharray": "5 5"
+          });
+          map.append(line);
+          const midX = (previous.x + point.x) / 2;
+          const midY = (previous.y + point.y) / 2;
+          const distance = formatDistance(distanceBetween(previous, point));
+          const label = svgElement("text", {
+            x: midX, y: midY - 5, fill: "#f0d99f", "text-anchor": "middle", "font-size": 10,
+            stroke: "#202a2b", "stroke-width": 3, "paint-order": "stroke"
+          });
+          label.textContent = distance;
+          map.append(label);
+        });
+
+        points.forEach(point => {
+          const isYou = point.id === currentUser.id;
+          const circle = svgElement("circle", {
+            cx: point.x, cy: point.y, r: 7,
+            fill: isYou ? "#f5f0e5" : "#e8c477",
+            stroke: "#1b2223", "stroke-width": 3
+          });
+          const title = svgElement("title");
+          title.textContent = `${point.display_name} · updated ${new Date(point.updated_at).toLocaleString()}`;
+          circle.append(title);
+          const name = svgElement("text", {
+            x: point.x, y: point.y + 21, fill: "#f2efe9", "text-anchor": "middle", "font-size": 10
+          });
+          name.textContent = point.display_name + (isYou ? " (you)" : "");
+          map.append(circle, name);
+        });
+      } catch (error) {
+        document.getElementById("location-status").textContent = `Could not load shared locations: ${error.message}`;
+      }
+    }
+
+    function stopLocationWatch() {
+      if (locationWatchId !== null && navigator.geolocation) {
+        navigator.geolocation.clearWatch(locationWatchId);
+        locationWatchId = null;
+      }
+    }
+
+    function startLocationWatch() {
+      if (!currentUser || !supabaseClient) return;
+      if (!window.isSecureContext || !navigator.geolocation) {
+        document.getElementById("location-status").textContent =
+          "Location needs HTTPS on your phone. Open this site through a secure HTTPS address and try again.";
+        return;
+      }
+      locationSharingEnabled = true;
+      readBatteryLevel();
+      if (locationWatchId !== null) return;
+      document.getElementById("location-status").textContent = "Requesting permission to share your location while this page is open…";
+      locationWatchId = navigator.geolocation.watchPosition(async position => {
+        const now = Date.now();
+        if (now - lastLocationWriteAt < 30000) return;
+        const { error } = await supabaseClient.from("locations").upsert({
+          user_id: currentUser.id,
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          battery_level: currentBatteryLevel,
+          updated_at: new Date().toISOString()
+        }, { onConflict: "user_id" });
+        if (error) {
+          document.getElementById("location-status").textContent = `Could not save your location: ${error.message}`;
+          return;
+        }
+        lastLocationWriteAt = now;
+        document.getElementById("location-status").textContent = "Sharing your latest location while this page is open.";
+        await refreshLocationMap();
+        await refreshShots();
+      }, error => {
+        const messages = {
+          1: "Location permission was denied. Allow it in your browser settings, then try again.",
+          2: "Your location could not be determined. Try again in a moment.",
+          3: "Location request timed out. Try again."
+        };
+        document.getElementById("location-status").textContent = messages[error.code]
+          || `Could not get your location: ${error.message}`;
+        stopLocationWatch();
+      }, { enableHighAccuracy: false, timeout: 15000, maximumAge: 15000 });
+    }
+
+    document.getElementById("share-location").addEventListener("click", startLocationWatch);
+
+    async function refreshStories() {
+      if (!supabaseClient || !currentUser) return;
+      const { data, error } = await supabaseClient
+        .from("substack_stories")
+        .select("id, title, url, created_at, profiles(display_name), story_comments(body, profiles(display_name)), story_reactions(user_id)")
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (error) {
+        document.getElementById("story-status").textContent = `Stories are device-only until the updated Supabase schema is applied.`;
+        return;
+      }
+      stories.splice(0, stories.length, ...(data || []).map(item => ({
+        id: item.id,
+        title: item.title,
+        url: item.url,
+        author: item.profiles?.display_name || "Member",
+        likes: item.story_reactions?.length || 0,
+        comments: (item.story_comments || []).map(comment => ({ author: comment.profiles?.display_name || "Member", text: comment.body }))
+      })));
+      renderStories();
+    }
+
+    function chooseMeetupSuggesters() {
+      const shuffled = [...meetupMembers].sort(() => Math.random() - 0.5);
+      return shuffled.slice(0, 2);
+    }
+
+    function createMeetupRound() {
+      const suggesters = chooseMeetupSuggesters();
+      meetupRound = {
+        suggesters,
+        proposals: [null, null],
+        votes: new Map(),
+        complete: false
+      };
+    }
+
+    function renderMeetup() {
+      const suggestersElement = document.getElementById("meetup-suggesters");
+      const proposalsElement = document.getElementById("meetup-proposals");
+      const lock = document.getElementById("meetup-lock");
+      const nextButton = document.getElementById("meetup-next");
+      suggestersElement.replaceChildren();
+      proposalsElement.replaceChildren();
+      nextButton.hidden = true;
+      if (meetupMembers.length < 2) {
+        lock.textContent = "At least two verified members are needed to start a meet up round.";
+        return;
+      }
+      if (!meetupRound) createMeetupRound();
+      meetupRound.suggesters.forEach(person => {
+        const chip = document.createElement("span");
+        chip.className = "meetup-suggester";
+        chip.textContent = `${person.display_name} · suggester`;
+        suggestersElement.append(chip);
+      });
+      meetupRound.proposals.forEach((proposal, index) => {
+        const card = document.createElement("article");
+        card.className = "meetup-proposal";
+        if (meetupRound.complete && proposal && proposal.votes === Math.max(...meetupRound.proposals.map(item => item.votes))) card.classList.add("winner");
+        const heading = document.createElement("h3");
+        heading.textContent = proposal ? proposal.activity : `Idea ${index + 1}`;
+        card.append(heading);
+        if (proposal) {
+          const place = document.createElement("p");
+          place.textContent = `⌖ ${proposal.place}`;
+          card.append(place);
+          if (proposal.note) {
+            const note = document.createElement("p");
+            note.textContent = proposal.note;
+            card.append(note);
+          }
+          if (meetupRound.complete) {
+            const result = document.createElement("p");
+            result.textContent = `${proposal.votes} anonymous vote${proposal.votes === 1 ? "" : "s"}`;
+            card.append(result);
+          } else {
+            const vote = document.createElement("button");
+            vote.className = "meetup-vote";
+            vote.type = "button";
+            vote.dataset.meetupVote = String(index);
+            vote.textContent = meetupRound.votes.has(currentUser?.id) ? "Anonymous vote recorded" : "Vote for this idea";
+            vote.disabled = meetupRound.votes.has(currentUser?.id);
+            if (meetupRound.votes.get(currentUser?.id) === index) vote.classList.add("selected");
+            card.append(vote);
+          }
+        } else {
+          const suggester = meetupRound.suggesters[index];
+          if (suggester?.id === currentUser?.id) {
+            const form = document.createElement("form");
+            form.className = "meetup-proposal-form";
+            form.dataset.proposalIndex = String(index);
+            form.innerHTML = `<input name="activity" maxlength="60" placeholder="Your activity idea" required><input name="place" maxlength="80" placeholder="Your suggested place" required><input name="note" maxlength="140" placeholder="Optional note"><button class="action-button primary" type="submit">Submit idea</button>`;
+            card.append(form);
+          } else {
+            const waiting = document.createElement("p");
+            waiting.textContent = `Waiting for ${suggester?.display_name || "the selected member"} to suggest.`;
+            card.append(waiting);
+          }
+        }
+        proposalsElement.append(card);
+      });
+      const voteCount = meetupRound.server ? meetupRound.voteCount : meetupRound.votes.size;
+      if (meetupRound.complete) {
+        lock.textContent = "Everyone has voted. The winning meet up is visible, and the next round is unlocked.";
+        nextButton.hidden = false;
+      } else if (meetupRound.proposals.every(Boolean)) {
+        lock.textContent = `${voteCount} of ${meetupMembers.length} anonymous votes recorded. The next meet up stays hidden until everyone votes.`;
+      } else {
+        lock.textContent = "The vote opens after both randomly selected suggesters submit an idea.";
+      }
+    }
+
+    async function refreshMeetup() {
+      if (!supabaseClient || !currentUser) {
+        meetupMembers = [];
+        meetupRound = null;
+        renderMeetup();
+        return;
+      }
+      const { data, error } = await supabaseClient.from("profiles").select("id, display_name, avatar_path").order("display_name");
+      if (error) {
+        document.getElementById("meetup-lock").textContent = "Could not load the group for this meet up round.";
+        return;
+      }
+      meetupMembers = data || [];
+      const { data: rounds, error: roundError } = await supabaseClient.from("meetup_rounds").select("id, status, suggester_one_id, suggester_two_id, created_at").order("created_at", { ascending: false }).limit(1);
+      if (roundError) {
+        document.getElementById("meetup-lock").textContent = "Apply the updated Supabase schema to start shared meet up rounds.";
+        return;
+      }
+      let serverRound = rounds?.[0];
+      if (!serverRound) {
+        const { data: createdRound, error: createError } = await supabaseClient.rpc("create_meetup_round");
+        if (createError || !createdRound) {
+          document.getElementById("meetup-lock").textContent = "At least two members are needed to create a shared meet up round.";
+          return;
+        }
+        const { data: freshRounds } = await supabaseClient.from("meetup_rounds").select("id, status, suggester_one_id, suggester_two_id, created_at").eq("id", createdRound);
+        serverRound = freshRounds?.[0];
+      }
+      const { data: proposals } = await supabaseClient.from("meetup_proposals").select("id, author_id, activity, place, note").eq("round_id", serverRound.id).order("id");
+      const { data: voteCount } = await supabaseClient.rpc("get_meetup_vote_count", { p_round_id: serverRound.id });
+      const { data: hasVoted } = await supabaseClient.rpc("has_meetup_voted", { p_round_id: serverRound.id });
+      const suggesterOne = meetupMembers.find(member => member.id === serverRound.suggester_one_id);
+      const suggesterTwo = meetupMembers.find(member => member.id === serverRound.suggester_two_id);
+      meetupRound = {
+        server: true,
+        id: serverRound.id,
+        status: serverRound.status,
+        suggesters: [suggesterOne, suggesterTwo].filter(Boolean),
+        proposals: [serverRound.suggester_one_id, serverRound.suggester_two_id].map(suggesterId => {
+          const proposal = (proposals || []).find(item => item.author_id === suggesterId);
+          return proposal ? { ...proposal, votes: 0 } : null;
+        }),
+        votes: hasVoted ? new Map([[currentUser.id, -1]]) : new Map(),
+        voteCount: Number(voteCount || 0),
+        complete: serverRound.status === "complete"
+      };
+      if (meetupRound.proposals.every(Boolean)) {
+        meetupRound.proposals.forEach(async proposal => {
+          const { data: count } = await supabaseClient.rpc("get_meetup_proposal_vote_count", { p_proposal_id: proposal.id });
+          proposal.votes = Number(count || 0);
+          renderMeetup();
+        });
+      }
+      renderMeetup();
+    }
+
+    document.getElementById("meetup-round").addEventListener("submit", async event => {
+      event.preventDefault();
+      const form = event.target.closest("[data-proposal-index]");
+      if (!form || !meetupRound) return;
+      const index = Number(form.dataset.proposalIndex);
+      if (meetupRound.server) {
+        const { error } = await supabaseClient.rpc("submit_meetup_proposal", { p_round_id: meetupRound.id, p_activity: form.elements.activity.value.trim(), p_place: form.elements.place.value.trim(), p_note: form.elements.note.value.trim() });
+        if (error) { document.getElementById("meetup-lock").textContent = `Could not submit your idea: ${error.message}`; return; }
+        await refreshMeetup();
+        return;
+      }
+      meetupRound.proposals[index] = { activity: form.elements.activity.value.trim(), place: form.elements.place.value.trim(), note: form.elements.note.value.trim(), votes: 0 };
+      renderMeetup();
+    });
+    document.getElementById("meetup-round").addEventListener("click", async event => {
+      const voteButton = event.target.closest("[data-meetup-vote]");
+      if (voteButton && meetupRound && currentUser && !meetupRound.votes.has(currentUser.id)) {
+        const index = Number(voteButton.dataset.meetupVote);
+        if (meetupRound.server) {
+          const proposal = meetupRound.proposals[index];
+          const { error } = await supabaseClient.rpc("submit_meetup_vote", { p_round_id: meetupRound.id, p_proposal_id: proposal.id });
+          if (error) { document.getElementById("meetup-lock").textContent = `Could not record your anonymous vote: ${error.message}`; return; }
+          await refreshMeetup();
+          return;
+        }
+        meetupRound.votes.set(currentUser.id, index);
+        meetupRound.proposals[index].votes += 1;
+        if (meetupRound.votes.size === meetupMembers.length) meetupRound.complete = true;
+        renderMeetup();
+        return;
+      }
+      if (event.target.id === "meetup-next" && meetupRound?.complete) {
+        if (meetupRound.server) {
+          const { data: nextRound, error } = await supabaseClient.rpc("create_meetup_round");
+          if (error || !nextRound) { document.getElementById("meetup-lock").textContent = error?.message || "Could not start the next meet up."; return; }
+          await refreshMeetup();
+          return;
+        }
+        createMeetupRound();
+        meetupRound.membersKey = meetupMembers.map(member => member.id).join(",");
+        renderMeetup();
+      }
+    });
+
+    function renderStories() {
+      const feed = document.getElementById("story-feed");
+      feed.replaceChildren();
+      if (!stories.length) {
+        const empty = document.createElement("p");
+        empty.className = "story-empty";
+        empty.textContent = "No stories shared yet. Start the conversation.";
+        feed.append(empty);
+        return;
+      }
+      stories.forEach(story => {
+        const article = document.createElement("article");
+        article.className = "story-item";
+        article.dataset.storyId = story.id;
+        const head = document.createElement("div");
+        head.className = "story-item-head";
+        const author = document.createElement("b");
+        author.textContent = story.author;
+        const time = document.createElement("span");
+        time.textContent = "just shared";
+        head.append(author, time);
+        const title = document.createElement("strong");
+        title.className = "story-title";
+        title.textContent = story.title;
+        const link = document.createElement("a");
+        link.className = "story-url";
+        link.href = story.url;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.textContent = story.url;
+        const actions = document.createElement("div");
+        actions.className = "story-actions";
+        const like = document.createElement("button");
+        like.className = "story-action";
+        like.type = "button";
+        like.dataset.storyAction = "like";
+        like.textContent = `♡ ${story.likes}`;
+        const commentToggle = document.createElement("button");
+        commentToggle.className = "story-action";
+        commentToggle.type = "button";
+        commentToggle.dataset.storyAction = "comment";
+        commentToggle.textContent = `Talk · ${story.comments.length}`;
+        actions.append(like, commentToggle);
+        const comments = document.createElement("div");
+        comments.className = "story-comments";
+        story.comments.forEach(comment => {
+          const line = document.createElement("div");
+          line.textContent = `${comment.author}: ${comment.text}`;
+          comments.append(line);
+        });
+        const commentForm = document.createElement("form");
+        commentForm.className = "story-comment-form";
+        commentForm.innerHTML = '<input name="comment" maxlength="160" placeholder="Add to the conversation" aria-label="Comment on this story"><button type="submit" aria-label="Post comment">↗</button>';
+        article.append(head, title, link, actions, comments, commentForm);
+        feed.append(article);
+      });
+    }
+
+    document.getElementById("story-form").addEventListener("submit", async event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const title = form.elements.title.value.trim();
+      const url = form.elements.url.value.trim();
+      let parsedUrl;
+      try { parsedUrl = new URL(url); } catch { document.getElementById("story-status").textContent = "Enter a valid Substack link."; return; }
+      if (!parsedUrl.hostname.endsWith("substack.com")) {
+        document.getElementById("story-status").textContent = "Please share a story from a Substack site.";
+        return;
+      }
+      const story = { id: `${Date.now()}-${Math.random()}`, title, url, author: document.getElementById("account-name").textContent || "You", likes: 0, comments: [] };
+      try {
+        if (supabaseClient && currentUser) {
+          const { data, error } = await supabaseClient.from("substack_stories").insert({ author_id: currentUser.id, title, url }).select("id").single();
+          if (error) throw error;
+          story.id = data.id;
+        }
+        stories.unshift(story);
+        renderStories();
+        form.reset();
+        document.getElementById("story-status").textContent = "Story shared with the block.";
+      } catch (error) {
+        document.getElementById("story-status").textContent = `Could not share the story: ${error.message}`;
+      }
+    });
+
+    document.getElementById("story-feed").addEventListener("click", async event => {
+      const action = event.target.closest("[data-story-action]");
+      if (!action) return;
+      const story = stories.find(item => item.id === action.closest("[data-story-id]").dataset.storyId);
+      if (!story) return;
+      if (action.dataset.storyAction === "like" && !story.liked) {
+        if (supabaseClient && currentUser && typeof story.id === "number") {
+          const { error } = await supabaseClient.from("story_reactions").upsert({ story_id: story.id, user_id: currentUser.id });
+          if (error) { document.getElementById("story-status").textContent = `Could not react to this story: ${error.message}`; return; }
+        }
+        story.likes += 1;
+        story.liked = true;
+      }
+      renderStories();
+    });
+    document.getElementById("story-feed").addEventListener("submit", async event => {
+      event.preventDefault();
+      const form = event.target;
+      const story = stories.find(item => item.id === form.closest("[data-story-id]").dataset.storyId);
+      const text = form.elements.comment.value.trim();
+      if (!story || !text) return;
+      if (supabaseClient && currentUser && typeof story.id === "number") {
+        const { error } = await supabaseClient.from("story_comments").insert({ story_id: story.id, author_id: currentUser.id, body: text });
+        if (error) { document.getElementById("story-status").textContent = `Could not comment on this story: ${error.message}`; return; }
+      }
+      story.comments.push({ author: document.getElementById("account-name").textContent || "You", text });
+      renderStories();
+    });
+    renderStories();
+
+    function renderShotInvites() {
+      const list = document.getElementById("shot-invites");
+      document.getElementById("shot-count").textContent = String(shotInvites.length);
+      list.replaceChildren();
+      if (!shotInvites.length) {
+        const empty = document.createElement("p");
+        empty.className = "shots-empty";
+        empty.textContent = "No invites sent yet.";
+        list.append(empty);
+        return;
+      }
+      shotInvites.forEach(invite => {
+        const card = document.createElement("div");
+        card.className = "shot-invite-card";
+        const title = document.createElement("b");
+        title.textContent = `To ${invite.recipientName} · ${invite.drink}`;
+        const detail = document.createElement("span");
+        detail.textContent = `${invite.place}${invite.message ? ` · ${invite.message}` : ""}`;
+        card.append(title, detail);
+        list.append(card);
+      });
+    }
+
+    function renderShots(people) {
+      const list = document.getElementById("shots-list");
+      list.replaceChildren();
+      if (!people.length) {
+        const empty = document.createElement("p");
+        empty.className = "shots-empty";
+        empty.textContent = currentUser ? "No nearby members have shared a recent location. Ask your block to tap Share my location." : "The demo account has no live nearby locations yet.";
+        list.append(empty);
+        selectedShotPerson = null;
+        document.getElementById("shot-send").disabled = true;
+        document.getElementById("shot-send").textContent = "Select someone nearby first";
+        return;
+      }
+      people.forEach(person => {
+        const row = document.createElement("div");
+        row.className = "shot-person";
+        const avatar = document.createElement("span");
+        avatar.className = "shot-avatar";
+        if (person.photoUrl) avatar.style.backgroundImage = `url("${person.photoUrl}")`;
+        const info = document.createElement("div");
+        info.className = "shot-person-info";
+        const name = document.createElement("b");
+        name.textContent = person.display_name;
+        const distance = document.createElement("span");
+        distance.textContent = `${formatDistance(person.distanceKm)} away · location shared ${person.isFresh ? "recently" : "earlier"}`;
+        info.append(name, distance);
+        const button = document.createElement("button");
+        button.className = "action-button shot-invite";
+        button.type = "button";
+        button.textContent = "Invite";
+        button.addEventListener("click", () => {
+          selectedShotPerson = person;
+          document.querySelector(".shots-planner").open = true;
+          document.getElementById("shot-send").disabled = false;
+          document.getElementById("shot-send").textContent = `Invite ${person.display_name}`;
+          document.getElementById("shot-drink").focus();
+          document.getElementById("shots-status").textContent = `${person.display_name} is selected. Suggest an activity and place below.`;
+        });
+        row.append(avatar, info, button);
+        list.append(row);
+      });
+    }
+
+    async function refreshShots() {
+      const statusMessage = document.getElementById("shots-status");
+      if (!supabaseClient || !currentUser) {
+        renderShots([]);
+        return;
+      }
+      try {
+        const [{ data: profiles, error: profileError }, { data: locations, error: locationError }] = await Promise.all([
+          supabaseClient.from("profiles").select("id, display_name, avatar_path"),
+          supabaseClient.from("locations").select("user_id, latitude, longitude, updated_at")
+        ]);
+        if (profileError) throw profileError;
+        if (locationError) throw locationError;
+        const mine = locations.find(location => location.user_id === currentUser.id);
+        if (!mine) {
+          renderShots([]);
+          statusMessage.textContent = "Tap Share my location above first, then nearby members will appear here.";
+          return;
+        }
+        const profileById = new Map(profiles.map(profile => [profile.id, profile]));
+        const people = locations
+          .filter(location => location.user_id !== currentUser.id && profileById.has(location.user_id))
+          .map(location => {
+            const profile = profileById.get(location.user_id);
+            const age = Date.now() - new Date(location.updated_at).getTime();
+            return { ...profile, ...location, distanceKm: distanceBetween(mine, location), isFresh: age < 15 * 60 * 1000, photoUrl: avatarUrl(profile.avatar_path) };
+          })
+          .sort((first, second) => first.distanceKm - second.distanceKm);
+        renderShots(people);
+        statusMessage.textContent = people.length ? "Closest members are shown first. Location sharing stays on while this page is open." : "No nearby members have shared a recent location yet.";
+      } catch (error) {
+        renderShots([]);
+        statusMessage.textContent = `Could not load nearby members: ${error.message}`;
+      }
+    }
+
+    document.getElementById("shots-form").addEventListener("submit", async event => {
+      event.preventDefault();
+      if (!selectedShotPerson) return;
+      const form = event.currentTarget;
+      const invite = {
+        recipientId: selectedShotPerson.id,
+        recipientName: selectedShotPerson.display_name,
+        drink: form.elements.drink.value.trim(),
+        place: form.elements.place.value.trim(),
+        message: form.elements.message.value.trim()
+      };
+      if (!invite.drink || !invite.place) return;
+      const statusMessage = document.getElementById("shots-status");
+      const button = document.getElementById("shot-send");
+      button.disabled = true;
+      try {
+        if (supabaseClient && currentUser) {
+          const { error } = await supabaseClient.from("meetup_invites").insert({
+            sender_id: currentUser.id,
+            recipient_id: invite.recipientId,
+            drink: invite.drink,
+            place: invite.place,
+            message: invite.message || null
+          });
+          if (error) throw error;
+        }
+        shotInvites.unshift(invite);
+        renderShotInvites();
+        form.reset();
+        statusMessage.textContent = `Invite sent to ${invite.recipientName}.`;
+      } catch (error) {
+        statusMessage.textContent = `Could not send the invite: ${error.message}. Apply the updated Supabase schema if needed.`;
+      } finally {
+        button.disabled = false;
+      }
+    });
+    renderShotInvites();
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) {
+        stopLocationWatch();
+      } else if (locationSharingEnabled) {
+        startLocationWatch();
+      }
+    });
+    window.addEventListener("pagehide", () => {
+      stopLocationWatch();
+      snapUrls.forEach(snapUrl => URL.revokeObjectURL(snapUrl));
+    });
+    window.addEventListener("pageshow", () => {
+      if (locationSharingEnabled && !document.hidden) startLocationWatch();
+    });
+
+    document.getElementById("take-snap").addEventListener("click", () => {
+      cameraStatus.textContent = "Take a photo, then send your snap.";
+      cameraInput.click();
+    });
+
+    cameraInput.addEventListener("change", () => {
+      const photo = cameraInput.files && cameraInput.files[0];
+      if (!photo) return;
+      if (!photo.type.startsWith("image/")) {
+        cameraStatus.textContent = "Choose an image for your snap.";
+        cameraInput.value = "";
+        return;
+      }
+      if (capturedSnapUrl) URL.revokeObjectURL(capturedSnapUrl);
+      capturedSnapUrl = URL.createObjectURL(photo);
+      snapUrls.push(capturedSnapUrl);
+      let preview = cameraFrame.querySelector("img");
+      if (!preview) {
+        preview = document.createElement("img");
+        preview.alt = "Snap ready to send";
+        cameraFrame.append(preview);
+      }
+      preview.src = capturedSnapUrl;
+      document.getElementById("camera-empty").hidden = true;
+      sendSnapButton.disabled = false;
+      cameraInput.value = "";
+      cameraStatus.textContent = "Snap ready. Send it when you’re happy with the photo.";
+    });
+    function renderSentSnaps() {
+      const snapList = document.getElementById("snap-list");
+      const snapCount = document.getElementById("snap-count");
+      snapCount.textContent = `${sentSnaps.length} new`;
+      snapList.replaceChildren();
+      if (sentSnaps.length === 0) {
+        const empty = document.createElement("p");
+        empty.className = "snap-empty";
+        empty.textContent = "No new instants.";
+        snapList.append(empty);
+        return;
+      }
+      sentSnaps.forEach(snap => {
+        const button = document.createElement("button");
+        button.className = "snap-item";
+        button.type = "button";
+        button.dataset.snapId = snap.id;
+        const icon = document.createElement("span");
+        icon.className = "snap-icon";
+        icon.setAttribute("aria-hidden", "true");
+        icon.textContent = "📸";
+        const text = document.createElement("span");
+        text.className = "snap-item-text";
+        const title = document.createElement("b");
+        title.textContent = `Instant from ${snap.sender}`;
+        const hint = document.createElement("span");
+        hint.textContent = "Tap to view once";
+        text.append(title, hint);
+        button.append(icon, text);
+        snapList.append(button);
+      });
+    }
+
+    sendSnapButton.addEventListener("click", () => {
+      if (!capturedSnapUrl) return;
+      sentSnaps.unshift({
+        id: `${Date.now()}-${Math.random()}`,
+        url: capturedSnapUrl,
+        sender: document.getElementById("account-name").textContent
+      });
+      capturedSnapUrl = null;
+      sendSnapButton.disabled = true;
+      document.getElementById("camera-frame").querySelector("img")?.remove();
+      document.getElementById("camera-empty").hidden = false;
+      renderSentSnaps();
+      cameraStatus.textContent = "Instant shared in this device-only demo. It appears below for a one-time view.";
+    });
+
+    document.getElementById("snap-list").addEventListener("click", event => {
+      const button = event.target.closest("button[data-snap-id]");
+      if (!button) return;
+      const snapIndex = sentSnaps.findIndex(snap => snap.id === button.dataset.snapId);
+      if (snapIndex < 0) return;
+      activeSnap = sentSnaps.splice(snapIndex, 1)[0];
+      document.getElementById("snap-viewer-title").textContent = `Instant from ${activeSnap.sender}`;
+      document.getElementById("snap-viewer-image").src = activeSnap.url;
+      document.getElementById("snap-viewer").hidden = false;
+      renderSentSnaps();
+      document.getElementById("close-snap").focus();
+    });
+
+    function closeSnapViewer() {
+      document.getElementById("snap-viewer").hidden = true;
+      document.getElementById("snap-viewer-image").removeAttribute("src");
+      activeSnap = null;
+      document.getElementById("take-snap").focus();
+    }
+
+    document.getElementById("close-snap").addEventListener("click", closeSnapViewer);
+    document.getElementById("save-snap").addEventListener("click", () => {
+      if (!activeSnap) return;
+      const bubble = document.createElement("div");
+      bubble.className = "chat-message";
+      const author = document.createElement("b");
+      author.textContent = `Saved instant · ${activeSnap.sender}`;
+      const image = document.createElement("img");
+      image.className = "chat-saved-photo";
+      image.src = activeSnap.url;
+      image.alt = "Snap saved to Chat the block";
+      bubble.append(author, image);
+      const messages = document.getElementById("chat-messages");
+      messages.querySelector(".muted")?.remove();
+      messages.append(bubble);
+      messages.scrollTop = messages.scrollHeight;
+      closeSnapViewer();
+    });
+
+    document.getElementById("chat-form").addEventListener("submit", event => {
+      event.preventDefault();
+      const input = document.getElementById("chat-input");
+      const message = input.value.trim();
+      if (!message) return;
+      const bubble = document.createElement("div");
+      bubble.className = "chat-message mine";
+      const author = document.createElement("b");
+      author.textContent = "You";
+      bubble.append(author, document.createTextNode(message));
+      const messages = document.getElementById("chat-messages");
+      messages.querySelector(".muted")?.remove();
+      messages.append(bubble);
+      messages.scrollTop = messages.scrollHeight;
+      input.value = "";
+    });
+
+    const chatView = document.getElementById("chat-view");
+    const chatOpener = document.getElementById("open-chat");
+    const chatInput = document.getElementById("chat-input");
+    const chatVoice = document.getElementById("chat-voice");
+    const chatThemePanel = document.getElementById("chat-theme-panel");
+    const chatThemeToggle = document.getElementById("chat-theme-toggle");
+    let mediaRecorder = null;
+    let voiceStream = null;
+    let voiceChunks = [];
+
+    const chatThemes = {
+      aurora: "radial-gradient(circle at 20% 0%, rgba(95,186,255,0.18), transparent 32%), linear-gradient(160deg, #141d2b, #071013 70%, #123e42)",
+      violet: "radial-gradient(circle at 80% 0%, rgba(190,91,229,0.2), transparent 34%), linear-gradient(160deg, #21172f, #100c1e 70%, #3b1b45)",
+      ember: "radial-gradient(circle at 20% 0%, rgba(236,126,68,0.2), transparent 34%), linear-gradient(160deg, #2b1814, #160e0b 70%, #43251b)",
+      mono: "radial-gradient(circle at 50% 0%, rgba(202,214,229,0.12), transparent 34%), linear-gradient(160deg, #20252d, #0b0c0e 70%, #313943)"
+    };
+
+    chatThemeToggle.addEventListener("click", () => {
+      const open = chatThemePanel.hidden;
+      chatThemePanel.hidden = !open;
+      chatThemeToggle.setAttribute("aria-expanded", String(open));
+    });
+    chatThemePanel.addEventListener("click", event => {
+      const swatch = event.target.closest("[data-theme]");
+      if (!swatch) return;
+      const theme = swatch.dataset.theme;
+      chatView.style.setProperty("--chat-background", chatThemes[theme]);
+      chatThemePanel.querySelectorAll("[data-theme]").forEach(item => item.setAttribute("aria-pressed", String(item === swatch)));
+      chatThemePanel.hidden = true;
+      chatThemeToggle.setAttribute("aria-expanded", "false");
+    });
+
+    const chatStickerPanel = document.getElementById("chat-stickers");
+    const chatStickerToggle = document.getElementById("chat-sticker-toggle");
+    chatStickerToggle.addEventListener("click", () => {
+      const open = chatStickerPanel.hidden;
+      chatStickerPanel.hidden = !open;
+      chatStickerToggle.setAttribute("aria-expanded", String(open));
+    });
+    chatStickerPanel.addEventListener("click", event => {
+      const button = event.target.closest("[data-sticker]");
+      if (!button) return;
+      const bubble = document.createElement("div");
+      bubble.className = "chat-message mine sticker";
+      bubble.textContent = button.dataset.sticker;
+      bubble.setAttribute("aria-label", `Sticker ${button.dataset.sticker}`);
+      const messages = document.getElementById("chat-messages");
+      messages.querySelector(".muted")?.remove();
+      messages.append(bubble);
+      messages.scrollTop = messages.scrollHeight;
+      chatStickerPanel.hidden = true;
+      chatStickerToggle.setAttribute("aria-expanded", "false");
+    });
+
+    function addVoiceMessage(url, durationSeconds) {
+      const bubble = document.createElement("div");
+      bubble.className = "chat-message mine voice";
+      const author = document.createElement("b");
+      author.textContent = "You · voice note";
+      const play = document.createElement("button");
+      play.className = "voice-play";
+      play.type = "button";
+      play.textContent = "▶";
+      play.setAttribute("aria-label", "Play voice note");
+      const wave = document.createElement("span");
+      wave.className = "voice-wave";
+      const duration = document.createElement("span");
+      duration.className = "muted";
+      duration.textContent = `${durationSeconds}s`;
+      const audio = new Audio(url);
+      play.addEventListener("click", async () => {
+        if (audio.paused) {
+          await audio.play();
+          play.textContent = "Ⅱ";
+        } else {
+          audio.pause();
+          play.textContent = "▶";
+        }
+      });
+      audio.addEventListener("ended", () => { play.textContent = "▶"; });
+      bubble.append(author, play, wave, duration);
+      const messages = document.getElementById("chat-messages");
+      messages.querySelector(".muted")?.remove();
+      messages.append(bubble);
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    chatVoice.addEventListener("click", async () => {
+      if (mediaRecorder?.state === "recording") {
+        mediaRecorder.stop();
+        chatVoice.classList.remove("recording");
+        chatVoice.textContent = "●";
+        chatVoice.setAttribute("aria-label", "Record voice note");
+        return;
+      }
+      if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
+        document.getElementById("chat-messages").insertAdjacentHTML("beforeend", '<p class="muted">Voice notes are not supported in this browser.</p>');
+        return;
+      }
+      try {
+        voiceStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        voiceChunks = [];
+        mediaRecorder = new MediaRecorder(voiceStream);
+        const startedAt = Date.now();
+        mediaRecorder.addEventListener("dataavailable", event => voiceChunks.push(event.data));
+        mediaRecorder.addEventListener("stop", () => {
+          const blob = new Blob(voiceChunks, { type: mediaRecorder.mimeType || "audio/webm" });
+          const url = URL.createObjectURL(blob);
+          snapUrls.push(url);
+          addVoiceMessage(url, Math.max(1, Math.round((Date.now() - startedAt) / 1000)));
+          voiceStream?.getTracks().forEach(track => track.stop());
+          voiceStream = null;
+        }, { once: true });
+        mediaRecorder.start();
+        chatVoice.classList.add("recording");
+        chatVoice.textContent = "■";
+        chatVoice.setAttribute("aria-label", "Stop recording");
+      } catch (error) {
+        document.getElementById("chat-messages").insertAdjacentHTML("beforeend", `<p class="muted">Microphone access was not available: ${error.message}</p>`);
+      }
+    });
+
+    function openChat() {
+      chatView.hidden = false;
+      body.classList.add("chat-open");
+      chatInput.focus();
+    }
+
+    function closeChat(restoreFocus = true) {
+      if (chatView.hidden) return;
+      chatView.hidden = true;
+      body.classList.remove("chat-open");
+      if (restoreFocus && body.classList.contains("logged-in")) chatOpener.focus();
+    }
+
+    chatOpener.addEventListener("click", openChat);
+    document.getElementById("close-chat").addEventListener("click", () => closeChat());
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape" && !chatView.hidden) closeChat();
+    });
+  </script>
+</body>
+</html>
