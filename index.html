@@ -784,7 +784,7 @@
       <section id="join-view" class="join-view login-view" aria-labelledby="join-title" hidden>
         <span class="join-kicker">A small circle. A real place.</span>
         <h2 class="join-heading" id="join-title">Bring your face to the block.</h2>
-        <p class="login-subtitle">Choose a photo, pick your name, and make your way in.</p>
+        <p class="login-subtitle">Create your account and step straight into your block.</p>
         <form class="auth-form" id="join-form">
           <label class="form-field" for="join-photo">Profile photo
             <input id="join-photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp" required>
@@ -792,7 +792,7 @@
           <label class="form-field" for="join-name">Your name
             <input id="join-name" name="name" type="text" minlength="1" maxlength="40" autocomplete="name" required>
           </label>
-          <label class="form-field" for="join-email">Email address
+          <label class="form-field" for="join-email">Email for account recovery
             <input id="join-email" name="email" type="email" placeholder="you@example.com" autocomplete="email" required>
           </label>
           <label class="form-field" for="join-password">Password
@@ -1525,11 +1525,9 @@
         accountCreated = true;
         pendingProfile = { displayName, photo };
         if (data.session) {
-          await finishSignupAndReturnToLogin(data.user);
+          await finishSignupAndEnterApp(data.user);
         } else {
-          showAuthView(verifyView);
-          verifyStatus.textContent =
-            `Supabase accepted the sign-up request for ${email}. Click the verification link in your email to return here.`;
+          joinStatus.textContent = "Your account was created, but email confirmation is still enabled. In Supabase, turn off Authentication → Providers → Email → Confirm email, then sign up again.";
         }
       } catch (error) {
         joinStatus.textContent = accountCreated
@@ -1557,6 +1555,13 @@
       const profile = await loadProfile(user);
       pendingProfile = null;
       return profile;
+    }
+
+    async function finishSignupAndEnterApp(user) {
+      const profile = await finishProfile(user);
+      document.getElementById("join-form").reset();
+      showAuthView(joinView);
+      await showDashboard(user, profile);
     }
 
     async function finishSignupAndReturnToLogin(user) {
