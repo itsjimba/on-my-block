@@ -291,12 +291,11 @@
       -webkit-overflow-scrolling: touch;
     }
     body.logged-in #dashboard { display: block; }
-    .dashboard-inner { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; width: min(900px, 100%); margin: 0 auto; }
+    .dashboard-inner { display: flex; flex-direction: column; gap: 14px; width: min(680px, 100%); margin: 0 auto; }
     .dashboard-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      grid-column: 1 / -1;
       margin: 8px 2px 0;
       padding: 6px 0;
     }
@@ -336,14 +335,25 @@
       backdrop-filter: blur(18px);
       -webkit-backdrop-filter: blur(18px);
     }
-    .art-intro { position: relative; grid-column: 1 / -1; min-height: 220px; overflow: hidden; padding: 28px; border: 1px solid rgba(255,255,255,0.16); border-radius: 28px; background: linear-gradient(110deg, rgba(15,17,21,0.84), rgba(15,17,21,0.18)), url("./saved_photo.png") center / cover; box-shadow: 0 24px 55px rgba(0,0,0,0.26), inset 0 1px 0 rgba(255,255,255,0.14); }
+    .art-intro { position: relative; min-height: 190px; overflow: hidden; padding: 28px; border: 1px solid rgba(255,255,255,0.16); border-radius: 28px; background: linear-gradient(110deg, rgba(15,17,21,0.84), rgba(15,17,21,0.18)), url("./saved_photo.png") center / cover; box-shadow: 0 24px 55px rgba(0,0,0,0.26), inset 0 1px 0 rgba(255,255,255,0.14); }
     .art-intro::after { content: ""; position: absolute; right: -28px; bottom: -45px; width: 170px; height: 170px; border: 1px solid rgba(243,201,120,0.35); border-radius: 50%; box-shadow: 0 0 0 18px rgba(243,201,120,0.05), 0 0 0 38px rgba(243,201,120,0.035); }
     .art-kicker { position: relative; z-index: 1; color: #f3c978; font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase; }
     .art-intro h2 { position: relative; z-index: 1; max-width: 440px; margin: 10px 0 14px; font-size: clamp(2rem, 7vw, 4rem); line-height: 0.95; letter-spacing: -0.05em; }
     .art-intro p { position: relative; z-index: 1; max-width: 360px; margin: 0; color: #d2cdc3; font-size: 0.9rem; line-height: 1.5; }
     .art-bubble { position: absolute; z-index: 1; top: 24px; right: 24px; max-width: 170px; padding: 11px 13px; border: 1px solid rgba(255,255,255,0.22); border-radius: 16px 16px 4px 16px; color: #211a0d; background: #f3c978; box-shadow: 0 12px 25px rgba(0,0,0,0.2); font-size: 0.78rem; line-height: 1.3; }
-    .dashboard-inner > section[aria-labelledby="camera-title"] { grid-column: 1 / -1; }
-    .dashboard-inner > .chat-open-card { grid-column: 1 / -1; }
+    .block-identity { display: flex; align-items: center; gap: 10px; margin: 8px 0 12px; padding: 10px 12px; border-radius: 14px; background: rgba(243,201,120,0.1); }
+    .block-identity strong { color: #f3c978; letter-spacing: 0.18em; }
+    .block-identity button { margin-left: auto; padding: 5px 8px; font-size: 0.7rem; }
+    .block-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .block-actions form { display: flex; gap: 6px; }
+    .block-actions input { min-width: 0; width: 100%; min-height: 38px; padding: 8px 10px; border: 1px solid rgba(255,255,255,0.13); border-radius: 11px; color: #f2efe9; background: rgba(0,0,0,0.22); font: inherit; font-size: 0.75rem; }
+    .block-actions button { flex: 0 0 auto; min-height: 38px; padding: 7px 9px; font-size: 0.72rem; }
+    .block-list { display: grid; gap: 7px; margin-top: 12px; }
+    .block-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border: 1px solid rgba(255,255,255,0.1); border-radius: 13px; background: rgba(255,255,255,0.045); }
+    .block-item strong, .block-item small { display: block; }
+    .block-item strong { font-size: 0.82rem; }
+    .block-item small { margin-top: 3px; color: #aaa9aa; font-size: 0.68rem; }
+    .dashboard-inner > .chat-open-card { width: 100%; }
     .card-heading {
       display: flex;
       align-items: baseline;
@@ -720,6 +730,7 @@
       #card { padding: 18px 16px; }
       #dashboard { padding-right: 13px; padding-left: 13px; }
       .dashboard-inner { display: flex; flex-direction: column; gap: 13px; }
+      .block-actions { grid-template-columns: 1fr; }
       .art-intro { min-height: 240px; padding: 23px; }
       .art-bubble { top: 18px; right: 18px; max-width: 145px; }
     }
@@ -832,7 +843,32 @@
         <span class="art-kicker">The neighborhood is talking</span>
         <h2 id="art-intro-title">Make a little noise.</h2>
         <p>Share a moment, find your people, and turn an ordinary night into a story worth telling.</p>
-        <span class="art-bubble">“Who’s close enough for one more?”</span>
+        <span class="art-bubble">A private place for your people.</span>
+      </section>
+
+      <section class="dashboard-card block-card" aria-labelledby="block-title">
+        <div class="card-heading"><h2 id="block-title">Your blocks</h2><span>Private circles, your rules</span></div>
+        <div class="block-identity"><span class="muted">Your friend code</span><strong id="friend-code">—</strong><button class="action-button" id="copy-friend-code" type="button">Copy</button></div>
+        <div class="block-actions"><form id="create-block-form"><input id="new-block-name" type="text" maxlength="50" placeholder="Name a new block" required><button class="action-button primary" type="submit">Create</button></form><form id="join-block-form"><input id="block-code-input" type="text" maxlength="8" placeholder="Enter a block code" required><button class="action-button" type="submit">Join</button></form></div>
+        <div id="block-invites" class="block-list" aria-live="polite"></div>
+        <div id="block-list" class="block-list" aria-live="polite"><p class="muted">Create or join your first block.</p></div>
+        <p id="block-status" role="status" aria-live="polite"></p>
+      </section>
+
+      <section class="dashboard-card spotify-dashboard-card" aria-labelledby="spotify-dashboard-title">
+        <div class="card-heading"><h2 id="spotify-dashboard-title">Listening now</h2><span>Share the soundtrack</span></div>
+        <div class="spotify-connect-row">
+          <div><strong id="spotify-connection-label">Spotify not connected</strong><small id="spotify-connection-status">Connect to show what you are playing right now.</small></div>
+          <button class="chat-music-submit spotify-connect" id="spotify-connect" type="button">Connect Spotify</button>
+        </div>
+        <form class="chat-music-form" id="spotify-form">
+          <label class="sr-only" for="spotify-url">Spotify track link</label><input id="spotify-url" type="url" placeholder="Paste a Spotify track link" autocomplete="url" required>
+          <label class="chat-listening-toggle"><input id="spotify-listening" type="checkbox"> <span>I’m listening now</span></label>
+          <label class="sr-only" for="spotify-note">Why are you sharing this song?</label><input id="spotify-note" type="text" maxlength="160" placeholder="Add a note (optional)">
+          <button class="chat-music-submit" type="submit">Share song</button>
+        </form>
+        <div class="spotify-feed" id="spotify-feed" aria-live="polite"><p class="muted">No songs shared yet.</p></div>
+        <div class="spotify-activity" id="spotify-activity" aria-live="polite"><p class="muted">No live listening activity yet.</p></div>
       </section>
 
       <section class="dashboard-card" aria-labelledby="camera-title">
@@ -849,7 +885,7 @@
           <button class="action-button primary" id="take-snap" type="button">Snap</button>
           <button class="action-button" id="send-snap" type="button" disabled>Send to others</button>
         </div>
-        <p id="camera-status" role="status" aria-live="polite">Camera opens on your device. Sending is a local demo; other phones need a shared server.</p>
+        <p id="camera-status" role="status" aria-live="polite">Camera opens on your device. Send an instant to your block.</p>
         <div class="snap-inbox" aria-labelledby="sent-snaps-title">
           <div class="snap-inbox-heading">
             <h3 id="sent-snaps-title">Recent instants</h3>
@@ -892,7 +928,7 @@
       </section>
 
       <section class="dashboard-card shots-card" aria-labelledby="shots-title">
-        <div class="card-heading"><h2 id="shots-title">Meet Up</h2><span>Find your closest people</span></div>
+        <div class="card-heading"><h2 id="shots-title">Meet Up</h2><span>Plan something together</span></div>
         <div class="meetup-round" id="meetup-round" aria-live="polite">
           <p class="meetup-rule">Two members are chosen at random to suggest an activity and place. Everyone votes anonymously, including the two suggesters.</p>
           <div class="meetup-suggesters" id="meetup-suggesters"></div>
@@ -941,8 +977,8 @@
         <button class="chat-back" id="close-chat" type="button" aria-label="Back to dashboard">←</button>
         <div>
           <h2 id="chat-title">Chat the block</h2>
-          <span class="chat-subtitle">Messages and voice notes · device-only demo</span>
-          <p>Chat · device-only demo</p>
+          <span class="chat-subtitle">Messages, voice notes, and stickers</span>
+          <p>Talk with your block</p>
         </div>
       </header>
       <div class="chat-tools">
@@ -954,26 +990,6 @@
         <button class="theme-swatch" data-theme="ember" aria-label="Ember theme" aria-pressed="false" type="button"></button>
         <button class="theme-swatch" data-theme="mono" aria-label="Mono theme" aria-pressed="false" type="button"></button>
       </div>
-      <section class="chat-music" aria-labelledby="chat-music-title">
-        <div class="chat-music-heading">
-          <div><span class="chat-music-kicker">Block soundtrack</span><h3 id="chat-music-title">What are we listening to?</h3></div>
-          <span class="spotify-mark" aria-hidden="true">●</span>
-        </div>
-        <div class="spotify-connect-row">
-          <div><strong id="spotify-connection-label">Spotify not connected</strong><small id="spotify-connection-status">Connect to show what you are playing right now.</small></div>
-          <button class="chat-music-submit spotify-connect" id="spotify-connect" type="button">Connect Spotify</button>
-        </div>
-        <form class="chat-music-form" id="spotify-form">
-          <label class="sr-only" for="spotify-url">Spotify track link</label>
-          <input id="spotify-url" type="url" placeholder="Paste a Spotify track link" autocomplete="url" required>
-          <label class="chat-listening-toggle"><input id="spotify-listening" type="checkbox"> <span>I’m listening now</span></label>
-          <label class="sr-only" for="spotify-note">Why are you sharing this song?</label>
-          <input id="spotify-note" type="text" maxlength="160" placeholder="Why this song? (optional)">
-          <button class="chat-music-submit" type="submit">Share song</button>
-        </form>
-        <div class="spotify-feed" id="spotify-feed" aria-live="polite"><p class="muted">No songs shared yet.</p></div>
-        <div class="spotify-activity" id="spotify-activity" aria-live="polite"><p class="muted">No live listening activity yet.</p></div>
-      </section>
       <div class="chat-messages" id="chat-messages" role="log" aria-live="polite">
         <p class="muted">Say something to the block.</p>
       </div>
@@ -1159,7 +1175,7 @@
         const friend = document.createElement("button");
         friend.className = "friend";
         friend.type = "button";
-        friend.setAttribute("aria-label", `${member.display_name}${member.isDemo ? " demo account" : ""}`);
+        friend.setAttribute("aria-label", member.display_name);
         friend.setAttribute("aria-pressed", "false");
         friend.dataset.name = member.display_name;
         friend.title = member.display_name;
@@ -1189,7 +1205,7 @@
       }
       const { data, error } = await supabaseClient
         .from("profiles")
-        .select("id, display_name, avatar_path")
+        .select("id, display_name, avatar_path, invite_code")
         .order("display_name");
       if (error) {
         status.textContent = `Could not load member photos: ${error.message}`;
@@ -1201,7 +1217,6 @@
         id: profile.id,
         display_name: profile.display_name,
         photoUrl: avatarUrl(profile.avatar_path) || "./saved_photo.png",
-        isDemo: false
       }));
       renderFriendWheel();
     }
@@ -1266,12 +1281,84 @@
     async function loadProfile(user) {
       const { data, error } = await supabaseClient
         .from("profiles")
-        .select("id, display_name, avatar_path")
+        .select("id, display_name, avatar_path, invite_code")
         .eq("id", user.id)
         .single();
       if (error) throw error;
       return data;
     }
+
+    function renderBlockList(blocks, memberRows) {
+      const list = document.getElementById("block-list");
+      list.replaceChildren();
+      if (!blocks.length) { const empty = document.createElement("p"); empty.className = "muted"; empty.textContent = "Create or join your first block."; list.append(empty); return; }
+      blocks.forEach(block => {
+        const card = document.createElement("article"); card.className = "block-item";
+        const copy = document.createElement("div");
+        const title = document.createElement("strong"); title.textContent = block.name;
+        const members = memberRows.filter(row => row.block_id === block.id).length;
+        const detail = document.createElement("small"); detail.textContent = `${members} member${members === 1 ? "" : "s"} · invite code ${block.join_code}`;
+        copy.append(title, detail);
+        const form = document.createElement("form"); form.className = "block-invite-form"; form.dataset.blockId = block.id;
+        form.innerHTML = '<input name="code" maxlength="8" placeholder="Friend code" aria-label="Friend code"><button class="action-button" type="submit">Invite</button>';
+        card.append(copy, form); list.append(card);
+      });
+    }
+
+    function renderBlockInvites(invites) {
+      const list = document.getElementById("block-invites"); list.replaceChildren();
+      invites.forEach(invite => {
+        const card = document.createElement("article"); card.className = "block-item";
+        const copy = document.createElement("div"); const title = document.createElement("strong"); title.textContent = `Invitation to ${invite.blocks?.name || "a block"}`;
+        const detail = document.createElement("small"); detail.textContent = "Someone wants you in their circle."; copy.append(title, detail);
+        const button = document.createElement("button"); button.className = "action-button primary"; button.type = "button"; button.dataset.acceptInvite = invite.id; button.textContent = "Accept";
+        card.append(copy, button); list.append(card);
+      });
+    }
+
+    async function refreshBlocks() {
+      if (!supabaseClient || !currentUser) return;
+      const [{ data: profile }, { data: blocks, error: blockError }, { data: memberRows }, { data: invites }] = await Promise.all([
+        supabaseClient.from("profiles").select("invite_code").eq("id", currentUser.id).single(),
+        supabaseClient.from("blocks").select("id, name, join_code, owner_id").order("created_at", { ascending: true }),
+        supabaseClient.from("block_members").select("block_id, user_id, role"),
+        supabaseClient.from("block_invites").select("id, block_id, status, blocks(name)").eq("status", "pending").order("created_at", { ascending: false })
+      ]);
+      if (profile?.invite_code) document.getElementById("friend-code").textContent = profile.invite_code;
+      if (blockError) { document.getElementById("block-status").textContent = blockError.message; return; }
+      renderBlockInvites(invites || []);
+      renderBlockList(blocks || [], memberRows || []);
+    }
+
+    document.getElementById("copy-friend-code").addEventListener("click", async () => {
+      const code = document.getElementById("friend-code").textContent;
+      if (code && code !== "—") { await navigator.clipboard?.writeText(code); document.getElementById("block-status").textContent = "Friend code copied."; }
+    });
+    document.getElementById("create-block-form").addEventListener("submit", async event => {
+      event.preventDefault(); const name = document.getElementById("new-block-name").value.trim();
+      const { error } = await supabaseClient.rpc("create_block", { p_name: name });
+      document.getElementById("block-status").textContent = error ? error.message : "Block created.";
+      if (!error) { event.currentTarget.reset(); await refreshBlocks(); }
+    });
+    document.getElementById("join-block-form").addEventListener("submit", async event => {
+      event.preventDefault(); const code = document.getElementById("block-code-input").value.trim();
+      const { error } = await supabaseClient.rpc("join_block_by_code", { p_code: code });
+      document.getElementById("block-status").textContent = error ? error.message : "You joined the block.";
+      if (!error) { event.currentTarget.reset(); await refreshBlocks(); }
+    });
+    document.getElementById("block-list").addEventListener("submit", async event => {
+      const form = event.target.closest(".block-invite-form"); if (!form) return;
+      event.preventDefault(); const code = form.elements.code.value.trim();
+      const { error } = await supabaseClient.rpc("invite_to_block", { p_block_id: form.dataset.blockId, p_invitee_code: code });
+      document.getElementById("block-status").textContent = error ? error.message : "Invite sent.";
+      if (!error) form.reset();
+    });
+    document.getElementById("block-invites").addEventListener("click", async event => {
+      const button = event.target.closest("[data-accept-invite]"); if (!button) return;
+      const { error } = await supabaseClient.rpc("accept_block_invite", { p_invite_id: Number(button.dataset.acceptInvite) });
+      document.getElementById("block-status").textContent = error ? error.message : "You joined the block.";
+      if (!error) await refreshBlocks();
+    });
 
     function avatarUrl(path) {
       if (!path) return "";
@@ -1281,6 +1368,7 @@
     async function showDashboard(user, profile) {
       currentUser = user;
       document.getElementById("account-name").textContent = profile.display_name;
+      document.getElementById("friend-code").textContent = profile.invite_code || "—";
       const avatar = document.getElementById("account-avatar");
       const photoUrl = avatarUrl(profile.avatar_path);
       avatar.style.backgroundImage = photoUrl ? `url("${photoUrl}")` : "none";
@@ -1292,6 +1380,8 @@
       await refreshShots();
       await refreshStories();
       await refreshMeetup();
+      await refreshBlocks();
+      await refreshSpotifyActivity();
       if (mapRefreshTimer !== null) window.clearInterval(mapRefreshTimer);
       mapRefreshTimer = window.setInterval(refreshLocationMap, 30000);
     }
@@ -1825,7 +1915,7 @@
         .order("created_at", { ascending: false })
         .limit(20);
       if (error) {
-        document.getElementById("story-status").textContent = `Stories are device-only until the updated Supabase schema is applied.`;
+        document.getElementById("story-status").textContent = `Stories are shared with your block.`;
         return;
       }
       stories.splice(0, stories.length, ...(data || []).map(item => ({
@@ -2174,7 +2264,7 @@
       if (!people.length) {
         const empty = document.createElement("p");
         empty.className = "shots-empty";
-        empty.textContent = currentUser ? "No nearby members have shared a recent location. Ask your block to tap Share my location." : "The demo account has no live nearby locations yet.";
+        empty.textContent = "No nearby members have shared a recent location. Ask your block to tap Share my location.";
         list.append(empty);
         selectedShotPerson = null;
         document.getElementById("shot-send").disabled = true;
@@ -2372,7 +2462,7 @@
       document.getElementById("camera-frame").querySelector("img")?.remove();
       document.getElementById("camera-empty").hidden = false;
       renderSentSnaps();
-      cameraStatus.textContent = "Instant shared in this device-only demo. It appears below for a one-time view.";
+      cameraStatus.textContent = "Instant ready for your block. It appears below for a one-time view.";
     });
 
     document.getElementById("snap-list").addEventListener("click", event => {
