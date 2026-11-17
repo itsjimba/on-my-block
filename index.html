@@ -1508,31 +1508,17 @@
       pendingProfile = { displayName, photo };
       joinStatus.textContent = "";
       setBusy(form, true);
-      let accountCreated = false;
       try {
-        const { data, error } = await client.auth.signUp({
-          email,
-          password,
-          options: {
-            data: { display_name: displayName },
-            emailRedirectTo: `${window.location.origin}/`
-          }
-        });
+        const { data, error } = await client.functions.invoke("create-account", { body: { email, password, displayName } });
         if (error) throw error;
-        if (!data.user) {
-          throw new Error("Supabase did not return a user for this sign-up.");
-        }
-        accountCreated = true;
+        if (!data?.userId) throw new Error("The signup service did not return a user.");
         pendingProfile = { displayName, photo };
-        if (data.session) {
-          await finishSignupAndEnterApp(data.user);
-        } else {
-          joinStatus.textContent = "Your account was created, but email confirmation is still enabled. In Supabase, turn off Authentication → Providers → Email → Confirm email, then sign up again.";
-        }
+        const { data: sessionData, error: sessionError } = await client.auth.signInWithPassword({ email, password });
+        if (sessionError) throw sessionError;
+        if (!sessionData.user) throw new Error("The new account could not be signed in.");
+        await finishSignupAndEnterApp(sessionData.user);
       } catch (error) {
-        joinStatus.textContent = accountCreated
-          ? `Your account was created, but setup could not finish: ${error.message}`
-          : `Could not start sign-up: ${error.message}`;
+        joinStatus.textContent = `Could not create your account: ${error.message}`;
       } finally {
         setBusy(form, false);
       }
