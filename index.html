@@ -1051,7 +1051,7 @@
 
     function getClient(messageElement = status) {
       if (supabaseClient) return supabaseClient;
-      messageElement.textContent = "Supabase is not connected. Check your project URL and publishable key in Connect Supabase.";
+      messageElement.textContent = "Sign-in is temporarily unavailable. Please reload the page.";
       return null;
     }
 
