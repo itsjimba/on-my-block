@@ -151,6 +151,8 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
 
+revoke all on function public.handle_new_user() from public, anon, authenticated;
+
 alter table public.profiles enable row level security;
 alter table public.locations enable row level security;
 alter table public.meetup_invites enable row level security;

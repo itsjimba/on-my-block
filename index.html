@@ -1119,14 +1119,8 @@
     }
 
     async function refreshFriendWheel() {
-      const demoMember = {
-        id: "demo-mkisii",
-        display_name: "Mkisii",
-        photoUrl: "./saved_photo.png",
-        isDemo: true
-      };
       if (!supabaseClient) {
-        members = [demoMember];
+        members = [];
         renderFriendWheel();
         return;
       }
@@ -1136,19 +1130,16 @@
         .order("display_name");
       if (error) {
         status.textContent = `Could not load member photos: ${error.message}`;
-        members = [demoMember];
+        members = [];
         renderFriendWheel();
         return;
       }
-      members = [
-        demoMember,
-        ...data.map(profile => ({
-          id: profile.id,
-          display_name: profile.display_name,
-          photoUrl: avatarUrl(profile.avatar_path) || "./saved_photo.png",
-          isDemo: false
-        }))
-      ];
+      members = data.map(profile => ({
+        id: profile.id,
+        display_name: profile.display_name,
+        photoUrl: avatarUrl(profile.avatar_path) || "./saved_photo.png",
+        isDemo: false
+      }));
       renderFriendWheel();
     }
 
@@ -1166,23 +1157,8 @@
       body.classList.remove("wrong", "success");
       body.classList.add("selected");
       loginPassword.value = "";
-      loginSubmit.textContent = selectedMember.isDemo ? "Enter My Block" : "Log in";
-      status.textContent = selectedMember.isDemo
-        ? "Selected Mkisii. Enter demo code 123456."
-        : `Selected ${selectedMember.display_name}. Enter this account's password.`;
-    }
-
-    function openDemoAccount() {
-      body.classList.remove("wrong");
-      body.classList.add("success");
-      status.textContent = "Welcome, Mkisii!";
-      document.getElementById("account-avatar").style.backgroundImage = `url("${selectedMember.photoUrl}")`;
-      document.getElementById("account-name").textContent = selectedMember.display_name;
-      currentUser = null;
-      document.getElementById("login").setAttribute("aria-hidden", "true");
-      dashboard.setAttribute("aria-hidden", "false");
-      body.classList.add("logged-in");
-      cameraStatus.textContent = "Mkisii demo account. Snaps and chat are device-only demos.";
+      loginSubmit.textContent = "Log in";
+      status.textContent = `Selected ${selectedMember.display_name}. Enter this account's password.`;
     }
 
     wheel.addEventListener("pointerdown", event => {
@@ -1280,15 +1256,6 @@
       const form = event.currentTarget;
       if (!selectedMember) {
         status.textContent = "Choose your photo from the wheel first.";
-        return;
-      }
-      if (selectedMember.isDemo) {
-        if (form.elements.password.value === "123456") {
-          openDemoAccount();
-        } else {
-          body.classList.add("wrong");
-          status.textContent = "That code is not right. Try 123456 for the Mkisii demo.";
-        }
         return;
       }
       const password = form.elements.password.value;
@@ -2058,7 +2025,7 @@
       const url = form.elements.url.value.trim();
       let parsedUrl;
       try { parsedUrl = new URL(url); } catch { document.getElementById("story-status").textContent = "Enter a valid Substack link."; return; }
-      if (!parsedUrl.hostname.endsWith("substack.com")) {
+      if (parsedUrl.hostname !== "substack.com" && !parsedUrl.hostname.endsWith(".substack.com")) {
         document.getElementById("story-status").textContent = "Please share a story from a Substack site.";
         return;
       }
