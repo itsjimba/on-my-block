@@ -758,7 +758,7 @@
 
       <section id="verify-view" class="join-view login-view" aria-labelledby="verify-title" hidden>
         <h2 class="join-heading" id="verify-title">Verify your email</h2>
-        <p class="login-subtitle">Enter the one-time code from your email.</p>
+        <p class="login-subtitle">Click the verification link in your email, or enter the one-time code if your email contains one.</p>
         <form class="auth-form" id="verify-form">
           <label class="form-field" for="verify-code">Verification code
             <input id="verify-code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" required>
@@ -1326,7 +1326,10 @@
         const { data, error } = await client.auth.signUp({
           email,
           password,
-          options: { data: { display_name: displayName } }
+          options: {
+            data: { display_name: displayName },
+            emailRedirectTo: `${window.location.origin}/`
+          }
         });
         if (error) throw error;
         if (!data.user) {
@@ -1339,7 +1342,7 @@
         } else {
           showAuthView(verifyView);
           verifyStatus.textContent =
-            `Supabase accepted the sign-up request for ${email}. Check your inbox and Spam/Junk for the verification code.`;
+            `Supabase accepted the sign-up request for ${email}. Click the verification link in your email to return here.`;
         }
       } catch (error) {
         joinStatus.textContent = accountCreated
@@ -1456,10 +1459,14 @@
       verifyStatus.textContent = "";
       button.disabled = true;
       try {
-        const { error } = await client.auth.resend({ type: "signup", email });
+        const { error } = await client.auth.resend({
+          type: "signup",
+          email,
+          options: { emailRedirectTo: `${window.location.origin}/` }
+        });
         if (error) throw error;
         verifyStatus.textContent =
-          `Supabase accepted the resend request for ${email}. Check your inbox and Spam/Junk.`;
+          `Supabase accepted the resend request for ${email}. Click the verification link in your inbox and return here.`;
       } catch (error) {
         verifyStatus.textContent = `Could not resend the verification code: ${error.message}`;
       } finally {
