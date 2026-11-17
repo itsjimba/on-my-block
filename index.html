@@ -603,6 +603,18 @@
     .chat-listening-toggle input { accent-color: #91f3b1; }
     .chat-music-submit { min-height: 40px; border: 1px solid rgba(145,243,177,0.32); border-radius: 11px; color: #07140d; background: #91f3b1; font: inherit; font-weight: 700; cursor: pointer; }
     .spotify-feed { display: grid; gap: 8px; margin-top: 10px; }
+    .spotify-connect-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; padding: 10px 11px; border: 1px solid rgba(145,243,177,0.18); border-radius: 13px; background: rgba(2,12,10,0.3); }
+    .spotify-connect-row strong, .spotify-connect-row small { display: block; }
+    .spotify-connect-row strong { color: #e8ffef; font-size: 0.8rem; }
+    .spotify-connect-row small { margin-top: 3px; color: #b3c7ba; font-size: 0.7rem; }
+    .spotify-connect { flex: 0 0 auto; min-height: 36px; padding: 7px 11px; font-size: 0.72rem; }
+    .spotify-connect.connected { color: #d4ffe0; background: transparent; }
+    .spotify-activity { display: grid; gap: 8px; margin-top: 10px; }
+    .spotify-activity-card { display: flex; align-items: center; gap: 9px; padding: 9px 11px; border-left: 3px solid #91f3b1; border-radius: 11px; background: rgba(145,243,177,0.08); }
+    .spotify-activity-card img { width: 42px; height: 42px; border-radius: 7px; object-fit: cover; }
+    .spotify-activity-card strong, .spotify-activity-card small { display: block; }
+    .spotify-activity-card strong { color: #e8ffef; font-size: 0.78rem; }
+    .spotify-activity-card small { margin-top: 3px; color: #b3c7ba; font-size: 0.7rem; }
     .spotify-card { display: grid; gap: 4px; padding: 10px 11px; border: 1px solid rgba(145,243,177,0.18); border-radius: 13px; background: rgba(2,12,10,0.3); }
     .spotify-card a { color: #a4f7be; font-size: 0.8rem; font-weight: 700; text-decoration: none; }
     .spotify-card a:hover { text-decoration: underline; }
@@ -947,6 +959,10 @@
           <div><span class="chat-music-kicker">Block soundtrack</span><h3 id="chat-music-title">What are we listening to?</h3></div>
           <span class="spotify-mark" aria-hidden="true">●</span>
         </div>
+        <div class="spotify-connect-row">
+          <div><strong id="spotify-connection-label">Spotify not connected</strong><small id="spotify-connection-status">Connect to show what you are playing right now.</small></div>
+          <button class="chat-music-submit spotify-connect" id="spotify-connect" type="button">Connect Spotify</button>
+        </div>
         <form class="chat-music-form" id="spotify-form">
           <label class="sr-only" for="spotify-url">Spotify track link</label>
           <input id="spotify-url" type="url" placeholder="Paste a Spotify track link" autocomplete="url" required>
@@ -956,6 +972,7 @@
           <button class="chat-music-submit" type="submit">Share song</button>
         </form>
         <div class="spotify-feed" id="spotify-feed" aria-live="polite"><p class="muted">No songs shared yet.</p></div>
+        <div class="spotify-activity" id="spotify-activity" aria-live="polite"><p class="muted">No live listening activity yet.</p></div>
       </section>
       <div class="chat-messages" id="chat-messages" role="log" aria-live="polite">
         <p class="muted">Say something to the block.</p>
@@ -1001,7 +1018,7 @@
     const sendSnapButton = document.getElementById("send-snap");
     const cameraStatus = document.getElementById("camera-status");
     const cameraFrame = document.getElementById("camera-frame");
-    const supabaseConfig = { url: "", key: "" };
+    const supabaseConfig = { url: "", key: "", spotifyClientId: "" };
     const snapUrls = [];
     const sentSnaps = [];
     let capturedSnapUrl = null;
@@ -1025,6 +1042,9 @@
     const proximityNotifiedPairs = new Set();
     let meetupMembers = [];
     let meetupRound = null;
+    let spotifyPollTimer = null;
+    let spotifyAccessToken = sessionStorage.getItem("on-my-block-spotify-token") || "";
+    let spotifyTokenExpiresAt = Number(sessionStorage.getItem("on-my-block-spotify-token-expires") || 0);
 
     document.getElementById("intro").addEventListener("click", () => {
       body.classList.add("in");
@@ -1114,6 +1134,7 @@
       if (setClientFromInputs()) joinStatus.textContent = "Supabase connected.";
     }
     initializeSupabase();
+    initializeSpotify();
     document.getElementById("show-join").addEventListener("click", () => {
       showAuthView(joinView);
       joinStatus.textContent = "";
@@ -2403,6 +2424,152 @@
     let mediaRecorder = null;
     let voiceStream = null;
     let voiceChunks = [];
+
+    const spotifyConnectButton = document.getElementById("spotify-connect");
+    const spotifyConnectionLabel = document.getElementById("spotify-connection-label");
+    const spotifyConnectionStatus = document.getElementById("spotify-connection-status");
+    const spotifyActivityFeed = document.getElementById("spotify-activity");
+    const spotifyRedirectUri = `${window.location.origin}${window.location.pathname}`;
+    const spotifyScopes = "user-read-currently-playing user-read-playback-state";
+
+    function base64Url(bytes) {
+      return btoa(String.fromCharCode(...new Uint8Array(bytes))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    }
+
+    function randomSpotifyString(length = 64) {
+      const bytes = new Uint8Array(length);
+      crypto.getRandomValues(bytes);
+      return base64Url(bytes);
+    }
+
+    async function spotifyChallenge(verifier) {
+      return base64Url(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)));
+    }
+
+    function spotifyConnected() {
+      return Boolean(spotifyAccessToken && spotifyTokenExpiresAt > Date.now() + 10000);
+    }
+
+    function clearSpotifyConnection(message = "Connect to show what you are playing right now.") {
+      spotifyAccessToken = "";
+      spotifyTokenExpiresAt = 0;
+      sessionStorage.removeItem("on-my-block-spotify-token");
+      sessionStorage.removeItem("on-my-block-spotify-token-expires");
+      spotifyConnectionLabel.textContent = "Spotify not connected";
+      spotifyConnectionStatus.textContent = message;
+      spotifyConnectButton.textContent = "Connect Spotify";
+      spotifyConnectButton.classList.remove("connected");
+      if (spotifyPollTimer) clearInterval(spotifyPollTimer);
+    }
+
+    async function beginSpotifyLogin() {
+      if (!supabaseConfig.spotifyClientId) {
+        spotifyConnectionStatus.textContent = "Add SPOTIFY_CLIENT_ID to Vercel first, then redeploy.";
+        return;
+      }
+      const state = randomSpotifyString(24);
+      const verifier = randomSpotifyString(64);
+      sessionStorage.setItem("on-my-block-spotify-state", state);
+      sessionStorage.setItem("on-my-block-spotify-verifier", verifier);
+      const challenge = await spotifyChallenge(verifier);
+      const params = new URLSearchParams({ client_id: supabaseConfig.spotifyClientId, response_type: "code", redirect_uri: spotifyRedirectUri, state, scope: spotifyScopes, code_challenge_method: "S256", code_challenge: challenge });
+      window.location.assign(`https://accounts.spotify.com/authorize?${params}`);
+    }
+
+    async function finishSpotifyLogin() {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get("code");
+      const state = params.get("state");
+      if (params.get("error")) {
+        history.replaceState({}, document.title, spotifyRedirectUri);
+        spotifyConnectionStatus.textContent = "Spotify connection was cancelled.";
+        return;
+      }
+      if (!code || !state) return;
+      const savedState = sessionStorage.getItem("on-my-block-spotify-state");
+      const verifier = sessionStorage.getItem("on-my-block-spotify-verifier");
+      history.replaceState({}, document.title, spotifyRedirectUri);
+      if (!savedState || savedState !== state || !verifier || !supabaseConfig.spotifyClientId) {
+        spotifyConnectionStatus.textContent = "Spotify sign-in could not be verified. Please try again.";
+        return;
+      }
+      const response = await fetch("https://accounts.spotify.com/api/token", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ client_id: supabaseConfig.spotifyClientId, grant_type: "authorization_code", code, redirect_uri: spotifyRedirectUri, code_verifier: verifier }) });
+      const token = await response.json();
+      sessionStorage.removeItem("on-my-block-spotify-state");
+      sessionStorage.removeItem("on-my-block-spotify-verifier");
+      if (!response.ok || !token.access_token) {
+        spotifyConnectionStatus.textContent = "Spotify could not finish connecting. Check the redirect URI.";
+        return;
+      }
+      spotifyAccessToken = token.access_token;
+      spotifyTokenExpiresAt = Date.now() + ((token.expires_in || 3600) * 1000);
+      sessionStorage.setItem("on-my-block-spotify-token", spotifyAccessToken);
+      sessionStorage.setItem("on-my-block-spotify-token-expires", String(spotifyTokenExpiresAt));
+    }
+
+    async function spotifyApi(path) {
+      if (!spotifyConnected()) return null;
+      const response = await fetch(`https://api.spotify.com/v1${path}`, { headers: { Authorization: `Bearer ${spotifyAccessToken}` } });
+      if (response.status === 401) { clearSpotifyConnection("Spotify sign-in expired. Connect again to resume live activity."); return null; }
+      if (response.status === 204) return null;
+      if (!response.ok) throw new Error(`Spotify returned ${response.status}.`);
+      return response.json();
+    }
+
+    function renderSpotifyActivity(items) {
+      spotifyActivityFeed.replaceChildren();
+      if (!items.length) {
+        const empty = document.createElement("p"); empty.className = "muted"; empty.textContent = "No live listening activity yet."; spotifyActivityFeed.append(empty); return;
+      }
+      items.forEach(item => {
+        const card = document.createElement("article"); card.className = "spotify-activity-card";
+        if (item.album_art_url) { const image = document.createElement("img"); image.src = item.album_art_url; image.alt = ""; card.append(image); }
+        const copy = document.createElement("div");
+        const title = document.createElement("strong"); title.textContent = `${item.is_playing ? "Listening now · " : "Recently listening · "}${item.track_name}`;
+        const artist = document.createElement("small"); artist.textContent = `${item.profiles?.display_name || (item.user_id === currentUser?.id ? "You" : "Neighbor")} · ${item.artist_name}`;
+        copy.append(title, artist); card.append(copy); spotifyActivityFeed.append(card);
+      });
+    }
+
+    async function refreshSpotifyActivity() {
+      if (!supabaseClient || !currentUser) return;
+      if (spotifyConnected()) {
+        try {
+          const playback = await spotifyApi("/me/player");
+          const track = playback?.item?.type === "track" ? playback.item : null;
+          if (track?.external_urls?.spotify) {
+            await supabaseClient.from("spotify_activity").upsert({ user_id: currentUser.id, spotify_url: track.external_urls.spotify, track_name: track.name, artist_name: (track.artists || []).map(artist => artist.name).join(", ") || "Unknown artist", album_art_url: track.album?.images?.[0]?.url || null, is_playing: Boolean(playback.is_playing), updated_at: new Date().toISOString() });
+          }
+          spotifyConnectionLabel.textContent = "Spotify connected";
+          spotifyConnectionStatus.textContent = track ? `Live activity is ${playback.is_playing ? "on" : "paused"}.` : "Nothing is playing right now.";
+          spotifyConnectButton.textContent = "Connected";
+          spotifyConnectButton.classList.add("connected");
+        } catch (error) { spotifyConnectionStatus.textContent = error.message; }
+      }
+      const { data, error } = await supabaseClient.from("spotify_activity").select("user_id, spotify_url, track_name, artist_name, album_art_url, is_playing, updated_at, profiles(display_name)").order("updated_at", { ascending: false }).limit(12);
+      if (!error) renderSpotifyActivity(data || []);
+    }
+
+    async function initializeSpotify() {
+      try {
+        const response = await fetch("/api/config", { cache: "no-store" });
+        if (response.ok) Object.assign(supabaseConfig, await response.json());
+      } catch { /* Spotify remains optional until configured. */ }
+      await finishSpotifyLogin();
+      if (spotifyConnected()) {
+        spotifyConnectionLabel.textContent = "Spotify connected";
+        spotifyConnectionStatus.textContent = "Checking your current listening activity…";
+        spotifyConnectButton.textContent = "Connected";
+        spotifyConnectButton.classList.add("connected");
+        spotifyPollTimer = setInterval(refreshSpotifyActivity, 30000);
+        refreshSpotifyActivity();
+      }
+    }
+
+    spotifyConnectButton.addEventListener("click", () => {
+      if (spotifyConnected()) { clearSpotifyConnection(); return; }
+      beginSpotifyLogin();
+    });
 
     function validSpotifyUrl(value) {
       try {

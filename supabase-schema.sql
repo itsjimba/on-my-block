@@ -93,6 +93,16 @@ create table if not exists public.chat_songs (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.spotify_activity (
+  user_id uuid primary key references public.profiles (id) on delete cascade,
+  spotify_url text not null check (spotify_url ~* '^https://open\\.spotify\\.com/track/[A-Za-z0-9]+'),
+  track_name text not null check (char_length(trim(track_name)) between 1 and 200),
+  artist_name text not null check (char_length(trim(artist_name)) between 1 and 240),
+  album_art_url text,
+  is_playing boolean not null default false,
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists public.photo_login_attempts (
   profile_id uuid primary key references auth.users (id) on delete cascade,
   window_started_at timestamptz not null default now(),
@@ -180,6 +190,7 @@ alter table public.story_comments enable row level security;
 alter table public.story_reactions enable row level security;
 alter table public.chat_messages enable row level security;
 alter table public.chat_songs enable row level security;
+alter table public.spotify_activity enable row level security;
 
 drop policy if exists "Signed-in members can read profiles" on public.profiles;
 create policy "Signed-in members can read profiles"
@@ -282,6 +293,22 @@ drop policy if exists "Members can share songs" on public.chat_songs;
 create policy "Members can share songs"
   on public.chat_songs for insert to authenticated
   with check ((select auth.uid()) = author_id);
+
+drop policy if exists "Members can read Spotify activity" on public.spotify_activity;
+create policy "Members can read Spotify activity"
+  on public.spotify_activity for select to authenticated
+  using (true);
+
+drop policy if exists "Members can create their Spotify activity" on public.spotify_activity;
+create policy "Members can create their Spotify activity"
+  on public.spotify_activity for insert to authenticated
+  with check ((select auth.uid()) = user_id);
+
+drop policy if exists "Members can update their Spotify activity" on public.spotify_activity;
+create policy "Members can update their Spotify activity"
+  on public.spotify_activity for update to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
 
 drop policy if exists "Members can read meetup rounds" on public.meetup_rounds;
 create policy "Members can read meetup rounds"
