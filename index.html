@@ -347,18 +347,33 @@
     .art-intro h2 { position: relative; z-index: 1; max-width: 440px; margin: 10px 0 14px; font-size: clamp(2rem, 7vw, 4rem); line-height: 0.95; letter-spacing: -0.05em; }
     .art-intro p { position: relative; z-index: 1; max-width: 360px; margin: 0; color: #d2cdc3; font-size: 0.9rem; line-height: 1.5; }
     .art-bubble { position: absolute; z-index: 1; top: 24px; right: 24px; max-width: 170px; padding: 11px 13px; border: 1px solid rgba(255,255,255,0.22); border-radius: 16px 16px 4px 16px; color: #211a0d; background: #f3c978; box-shadow: 0 12px 25px rgba(0,0,0,0.2); font-size: 0.78rem; line-height: 1.3; }
-    .block-identity { display: flex; align-items: center; gap: 10px; margin: 8px 0 12px; padding: 10px 12px; border-radius: 14px; background: rgba(243,201,120,0.1); }
-    .block-identity strong { color: #f3c978; letter-spacing: 0.18em; }
-    .block-identity button { margin-left: auto; padding: 5px 8px; font-size: 0.7rem; }
-    .block-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .block-identity { display: flex; align-items: center; gap: 10px; margin: 8px 0 14px; padding: 12px 13px; border: 1px solid rgba(243,201,120,0.18); border-radius: 15px; background: linear-gradient(135deg, rgba(243,201,120,0.12), rgba(243,201,120,0.04)); }
+    .block-identity-copy { min-width: 0; }
+    .block-identity-copy span, .block-identity-copy strong { display: block; }
+    .block-identity-copy span { color: #aaa9aa; font-size: 0.7rem; }
+    .block-identity-copy strong { margin-top: 3px; color: #f3c978; font-size: 1rem; letter-spacing: 0.18em; }
+    .block-identity button { margin-left: auto; padding: 7px 9px; font-size: 0.7rem; }
+    .block-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .block-action-panel { display: grid; gap: 8px; min-width: 0; padding: 13px; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; background: rgba(255,255,255,0.045); }
+    .block-action-panel.join-panel { border-color: rgba(142,209,255,0.22); background: linear-gradient(145deg, rgba(65,130,170,0.14), rgba(255,255,255,0.04)); }
+    .block-action-panel h3 { margin: 0; font-size: 0.86rem; }
+    .block-action-panel p { min-height: 32px; margin: 0; color: #aaa9aa; font-size: 0.7rem; line-height: 1.4; }
     .block-actions form { display: flex; gap: 6px; }
-    .block-actions input { min-width: 0; width: 100%; min-height: 38px; padding: 8px 10px; border: 1px solid rgba(255,255,255,0.13); border-radius: 11px; color: #f2efe9; background: rgba(0,0,0,0.22); font: inherit; font-size: 0.75rem; }
-    .block-actions button { flex: 0 0 auto; min-height: 38px; padding: 7px 9px; font-size: 0.72rem; }
-    .block-list { display: grid; gap: 7px; margin-top: 12px; }
-    .block-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border: 1px solid rgba(255,255,255,0.1); border-radius: 13px; background: rgba(255,255,255,0.045); }
+    .block-actions input { min-width: 0; width: 100%; min-height: 40px; padding: 8px 10px; border: 1px solid rgba(255,255,255,0.13); border-radius: 11px; color: #f2efe9; background: rgba(0,0,0,0.22); font: inherit; font-size: 0.76rem; }
+    .block-actions input::placeholder { color: #7f8791; }
+    .block-actions input#block-code-input { letter-spacing: 0.12em; text-transform: uppercase; }
+    .block-actions button { flex: 0 0 auto; min-height: 40px; padding: 7px 10px; font-size: 0.72rem; }
+    .block-list { display: grid; gap: 8px; margin-top: 13px; }
+    .block-list-heading { margin: 15px 0 0; color: #c9c3b8; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+    .block-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 13px; border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; background: rgba(255,255,255,0.045); }
+    .block-item-copy { min-width: 0; }
     .block-item strong, .block-item small { display: block; }
-    .block-item strong { font-size: 0.82rem; }
-    .block-item small { margin-top: 3px; color: #aaa9aa; font-size: 0.68rem; }
+    .block-item strong { overflow: hidden; font-size: 0.86rem; text-overflow: ellipsis; white-space: nowrap; }
+    .block-item small { margin-top: 4px; color: #aaa9aa; font-size: 0.7rem; }
+    .block-item-code { color: #f3c978 !important; letter-spacing: 0.1em; }
+    .block-item-actions { display: flex; flex: 0 0 auto; gap: 6px; }
+    .block-item-actions button { min-height: 34px; padding: 6px 8px; font-size: 0.68rem; }
+    #block-status { min-height: 18px; margin-top: 10px; }
     .dashboard-inner > .chat-open-card { width: 100%; }
     .card-heading {
       display: flex;
@@ -856,9 +871,22 @@
 
       <section class="dashboard-card block-card" aria-labelledby="block-title">
         <div class="card-heading"><h2 id="block-title">Your blocks</h2><span>Private circles, your rules</span></div>
-        <div class="block-identity"><span class="muted">Your friend code</span><strong id="friend-code">—</strong><button class="action-button" id="copy-friend-code" type="button">Copy</button></div>
-        <div class="block-actions"><form id="create-block-form"><input id="new-block-name" type="text" maxlength="50" placeholder="Name a new block" required><button class="action-button primary" type="submit">Create</button></form><form id="join-block-form"><input id="block-code-input" type="text" maxlength="8" placeholder="Enter a block code" required><button class="action-button" type="submit">Join</button></form></div>
+        <div class="block-identity"><div class="block-identity-copy"><span>Your personal friend code</span><strong id="friend-code">—</strong></div><button class="action-button" id="copy-friend-code" type="button">Copy code</button></div>
+        <div class="block-actions">
+          <div class="block-action-panel">
+            <h3>Create a new block</h3>
+            <p>Start a private space and invite friends with its block code.</p>
+            <form id="create-block-form"><input id="new-block-name" type="text" maxlength="50" placeholder="e.g. Friday Night Crew" aria-label="New block name" required><button class="action-button primary" type="submit">Create</button></form>
+          </div>
+          <div class="block-action-panel join-panel">
+            <h3>Join a specific block</h3>
+            <p>Ask a member for that block’s 8-character code, then enter it here.</p>
+            <form id="join-block-form"><input id="block-code-input" type="text" maxlength="8" placeholder="8-character code" aria-label="Specific block code" autocomplete="off" required><button class="action-button" type="submit">Join</button></form>
+          </div>
+        </div>
+        <p class="block-list-heading" id="block-invites-heading" hidden>Block invitations</p>
         <div id="block-invites" class="block-list" aria-live="polite"></div>
+        <p class="block-list-heading" id="block-list-heading" hidden>Your circles</p>
         <div id="block-list" class="block-list" aria-live="polite"><p class="muted">Create or join your first block.</p></div>
         <p id="block-status" role="status" aria-live="polite"></p>
       </section>
@@ -1298,23 +1326,28 @@
 
     function renderBlockList(blocks, memberRows) {
       const list = document.getElementById("block-list");
+      const heading = document.getElementById("block-list-heading");
       list.replaceChildren();
-      if (!blocks.length) { const empty = document.createElement("p"); empty.className = "muted"; empty.textContent = "Create or join your first block."; list.append(empty); return; }
+      heading.hidden = !blocks.length;
+      if (!blocks.length) { const empty = document.createElement("p"); empty.className = "muted"; empty.textContent = "Your circles will appear here after you create one or join with a block code."; list.append(empty); return; }
       blocks.forEach(block => {
         const card = document.createElement("article"); card.className = "block-item";
-        const copy = document.createElement("div");
+        const copy = document.createElement("div"); copy.className = "block-item-copy";
         const title = document.createElement("strong"); title.textContent = block.name;
         const members = memberRows.filter(row => row.block_id === block.id).length;
         const detail = document.createElement("small"); detail.textContent = `${members} member${members === 1 ? "" : "s"} · invite code ${block.join_code}`;
-        copy.append(title, detail);
+        const code = document.createElement("small"); code.className = "block-item-code"; code.textContent = block.join_code;
+        copy.append(title, detail, code);
         const form = document.createElement("form"); form.className = "block-invite-form"; form.dataset.blockId = block.id;
         form.innerHTML = '<input name="code" maxlength="8" placeholder="Friend code" aria-label="Friend code"><button class="action-button" type="submit">Invite</button>';
-        card.append(copy, form); list.append(card);
+        const actions = document.createElement("div"); actions.className = "block-item-actions";
+        const copyButton = document.createElement("button"); copyButton.className = "action-button"; copyButton.type = "button"; copyButton.dataset.copyBlockCode = block.join_code; copyButton.textContent = "Copy code";
+        actions.append(copyButton, form); card.append(copy, actions); list.append(card);
       });
     }
 
     function renderBlockInvites(invites) {
-      const list = document.getElementById("block-invites"); list.replaceChildren();
+      const list = document.getElementById("block-invites"); const heading = document.getElementById("block-invites-heading"); list.replaceChildren(); heading.hidden = !invites.length;
       invites.forEach(invite => {
         const card = document.createElement("article"); card.className = "block-item";
         const copy = document.createElement("div"); const title = document.createElement("strong"); title.textContent = `Invitation to ${invite.blocks?.name || "a block"}`;
@@ -1343,16 +1376,23 @@
       if (code && code !== "—") { await navigator.clipboard?.writeText(code); document.getElementById("block-status").textContent = "Friend code copied."; }
     });
     document.getElementById("create-block-form").addEventListener("submit", async event => {
-      event.preventDefault(); const name = document.getElementById("new-block-name").value.trim();
+      event.preventDefault(); const form = event.currentTarget; const name = document.getElementById("new-block-name").value.trim(); const button = form.querySelector("button");
+      button.disabled = true; document.getElementById("block-status").textContent = "Creating your block…";
       const { error } = await supabaseClient.rpc("create_block", { p_name: name });
-      document.getElementById("block-status").textContent = error ? error.message : "Block created.";
-      if (!error) { event.currentTarget.reset(); await refreshBlocks(); }
+      document.getElementById("block-status").textContent = error ? `Could not create the block: ${error.message}` : "Block created. Share its code with your friends.";
+      if (!error) { form.reset(); await refreshBlocks(); } button.disabled = false;
     });
     document.getElementById("join-block-form").addEventListener("submit", async event => {
-      event.preventDefault(); const code = document.getElementById("block-code-input").value.trim();
+      event.preventDefault(); const form = event.currentTarget; const input = document.getElementById("block-code-input"); const code = input.value.trim().toUpperCase(); const button = form.querySelector("button");
+      if (!/^[A-Z0-9]{8}$/.test(code)) { document.getElementById("block-status").textContent = "Enter the full 8-character block code."; input.focus(); return; }
+      button.disabled = true; document.getElementById("block-status").textContent = "Joining that block…";
       const { error } = await supabaseClient.rpc("join_block_by_code", { p_code: code });
-      document.getElementById("block-status").textContent = error ? error.message : "You joined the block.";
-      if (!error) { event.currentTarget.reset(); await refreshBlocks(); }
+      document.getElementById("block-status").textContent = error ? `Could not join that block: ${error.message}` : "You joined the block. It is now in Your circles.";
+      if (!error) { form.reset(); await refreshBlocks(); } button.disabled = false;
+    });
+    document.getElementById("block-list").addEventListener("click", async event => {
+      const button = event.target.closest("[data-copy-block-code]"); if (!button) return;
+      await navigator.clipboard?.writeText(button.dataset.copyBlockCode); document.getElementById("block-status").textContent = `Code ${button.dataset.copyBlockCode} copied.`;
     });
     document.getElementById("block-list").addEventListener("submit", async event => {
       const form = event.target.closest(".block-invite-form"); if (!form) return;
