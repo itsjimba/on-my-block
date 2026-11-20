@@ -331,6 +331,10 @@
       font-size: 0.76rem;
       cursor: pointer;
     }
+    .dashboard-nav { display: flex; gap: 7px; overflow-x: auto; padding: 2px 0 3px; scrollbar-width: none; }
+    .dashboard-nav::-webkit-scrollbar { display: none; }
+    .dashboard-nav a { flex: 0 0 auto; padding: 7px 11px; border: 1px solid rgba(255,255,255,0.1); border-radius: 999px; color: #b9c2ce; background: rgba(255,255,255,0.055); font-size: 0.72rem; text-decoration: none; }
+    .dashboard-nav a:first-child { border-color: rgba(243,201,120,0.3); color: #f3c978; background: rgba(243,201,120,0.09); }
     .dashboard-card {
       margin: 0;
       padding: 16px;
@@ -755,6 +759,16 @@
       .art-intro { min-height: 240px; padding: 23px; }
       .art-bubble { top: 18px; right: 18px; max-width: 145px; }
     }
+    @media (min-width: 820px) {
+      .dashboard-inner { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); align-items: start; width: min(1080px, 100%); gap: 16px; }
+      .dashboard-header, .dashboard-nav, .art-intro, .block-card, .chat-open-card { grid-column: 1 / -1; }
+      .spotify-dashboard-card, .dashboard-inner > section[aria-labelledby="camera-title"] { grid-column: span 6; }
+      .dashboard-inner > section[aria-labelledby="location-title"] { grid-column: span 7; }
+      .battery-card { grid-column: span 5; }
+      .story-card { grid-column: span 7; }
+      .shots-card { grid-column: span 5; }
+      .dashboard-card { min-width: 0; }
+    }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {
         animation-duration: 0.01ms !important;
@@ -861,6 +875,13 @@
           <button class="sign-out" id="sign-out" type="button">Sign out</button>
         </div>
       </header>
+      <nav class="dashboard-nav" aria-label="Dashboard sections">
+        <a href="#block-title">Blocks</a>
+        <a href="#spotify-dashboard-title">Listening</a>
+        <a href="#camera-title">Instants</a>
+        <a href="#stories-title">Stories</a>
+        <a href="#open-chat">Chat</a>
+      </nav>
 
       <section class="art-intro" aria-labelledby="art-intro-title">
         <span class="art-kicker">The neighborhood is talking</span>

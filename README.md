@@ -19,3 +19,15 @@ Run [supabase-schema.sql](./supabase-schema.sql) in the Supabase SQL Editor, the
 ## Local preview
 
 Run a static server from the project folder, then open the displayed local URL. Supabase connection values can be entered through the setup panel when `/api/config` is unavailable.
+
+## Ubuntu hosting with Nginx
+
+This repository includes an Ubuntu setup script and Nginx configuration. On the Ubuntu server, run:
+
+```bash
+git clone https://github.com/itsjimba/on-my-block.git
+cd on-my-block
+sudo bash deploy/setup-ubuntu.sh
+```
+
+The script installs Nginx, serves the project from `/var/www/on-my-block`, and creates `/etc/on-my-block/config.json` from the public Supabase URL and publishable key you enter. Do not put a Supabase service-role key in that file or in this repository. After DNS points to the server, enable HTTPS with the Certbot commands printed by the script.

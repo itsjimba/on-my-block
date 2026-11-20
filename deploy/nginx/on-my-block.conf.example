@@ -1,0 +1,28 @@
+server {
+    listen 80;
+    listen [::]:80;
+    server_name YOUR_DOMAIN YOUR_WWW_DOMAIN;
+
+    root /var/www/on-my-block;
+    index index.html;
+
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "camera=(self), microphone=(self), geolocation=(self)" always;
+    add_header Content-Security-Policy "default-src 'self'; object-src 'none'; img-src 'self' data: blob: https://*.supabase.co; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://accounts.spotify.com https://api.spotify.com; media-src 'self' blob:; font-src 'self' https://i.scdn.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://accounts.spotify.com" always;
+
+    location = /api/config {
+        default_type application/json;
+        alias /etc/on-my-block/config.json;
+        add_header Cache-Control "no-store" always;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location ~ /\. {
+        deny all;
+    }
+}
