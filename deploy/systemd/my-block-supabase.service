@@ -1,0 +1,17 @@
+[Unit]
+Description=My Block self-hosted Supabase stack
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/my-block-supabase
+ExecStart=/usr/bin/docker compose -f docker-compose.yml -f docker-compose.my-block.yml up -d --wait
+ExecStop=/usr/bin/docker compose -f docker-compose.yml -f docker-compose.my-block.yml down
+TimeoutStartSec=0
+TimeoutStopSec=120
+
+[Install]
+WantedBy=multi-user.target

@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const baseCorsHeaders = {
   "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
@@ -11,6 +11,15 @@ function corsHeaders(request: Request): Record<string, string> {
   return origin && allowedOrigins.includes(origin)
     ? { ...baseCorsHeaders, "Access-Control-Allow-Origin": origin, Vary: "Origin" }
     : { ...baseCorsHeaders };
+}
+
+function selfHostedKey(name: "SUPABASE_SECRET_KEYS" | "SUPABASE_PUBLISHABLE_KEYS"): string {
+  try {
+    const values = JSON.parse(Deno.env.get(name) ?? "{}");
+    return typeof values.default === "string" ? values.default : "";
+  } catch {
+    return "";
+  }
 }
 
 function respond(body: Record<string, unknown>, status: number, request: Request): Response {
@@ -60,8 +69,8 @@ Deno.serve(async (request: Request) => {
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || selfHostedKey("SUPABASE_PUBLISHABLE_KEYS");
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || selfHostedKey("SUPABASE_SECRET_KEYS");
   if (!supabaseUrl || !anonKey || !serviceRoleKey) {
     console.error("Photo login requires SUPABASE_URL, SUPABASE_ANON_KEY, and SUPABASE_SERVICE_ROLE_KEY.");
     return respond({ error: "Photo login is not configured on the server." }, 500, request);

@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const baseCorsHeaders = {
   "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
@@ -13,6 +13,15 @@ function corsHeaders(request: Request): Record<string, string> {
 
 function respond(body: Record<string, unknown>, status: number, request: Request): Response {
   return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders(request), "Content-Type": "application/json" } });
+}
+
+function selfHostedKey(name: "SUPABASE_SECRET_KEYS" | "SUPABASE_PUBLISHABLE_KEYS"): string {
+  try {
+    const values = JSON.parse(Deno.env.get(name) ?? "{}");
+    return typeof values.default === "string" ? values.default : "";
+  } catch {
+    return "";
+  }
 }
 
 Deno.serve(async request => {
@@ -38,7 +47,7 @@ Deno.serve(async request => {
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || selfHostedKey("SUPABASE_SECRET_KEYS");
   if (!supabaseUrl || !serviceRoleKey) return respond({ error: "Signup is not configured on the server." }, 500, request);
 
   const adminClient = createClient(supabaseUrl, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } });

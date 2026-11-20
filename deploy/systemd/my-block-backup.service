@@ -1,0 +1,7 @@
+[Unit]
+Description=Back up the My Block PostgreSQL database
+After=my-block-supabase.service
+
+[Service]
+Type=oneshot
+ExecStart=/var/www/on-my-block/deploy/backup.sh
